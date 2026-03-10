@@ -11,3 +11,4 @@
 - Added Prisma-backed experiment and run CRUD slices with unit test coverage.
 - Applied initial Prisma migration to local Docker Postgres and executed seed placeholder.
 - Documented branching workflow and aligned README local setup commands with npm + Docker usage.
+- Implemented run parameter and metric endpoints with Prisma persistence and test coverage.

@@ -2,6 +2,8 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, RunStatus } from '@prisma/client';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { CreateRunMetricDto } from './dto/create-run-metric.dto';
+import { CreateRunParamDto } from './dto/create-run-param.dto';
 import { CreateRunDto } from './dto/create-run.dto';
 import { UpdateRunStatusDto } from './dto/update-run-status.dto';
 
@@ -79,5 +81,45 @@ export class RunsService {
 
     this.auditService.log('run.update_status', 'run', run.id);
     return run;
+  }
+
+  async upsertParam(workspaceId: string, runId: string, payload: CreateRunParamDto) {
+    await this.findOne(workspaceId, runId);
+
+    const param = await this.prisma.runParam.upsert({
+      where: {
+        runId_key: {
+          runId,
+          key: payload.key,
+        },
+      },
+      update: {
+        value: payload.value,
+      },
+      create: {
+        runId,
+        key: payload.key,
+        value: payload.value,
+      },
+    });
+
+    this.auditService.log('run.param_upsert', 'run_param', `${runId}:${payload.key}`);
+    return param;
+  }
+
+  async addMetric(workspaceId: string, runId: string, payload: CreateRunMetricDto) {
+    await this.findOne(workspaceId, runId);
+
+    const metric = await this.prisma.runMetric.create({
+      data: {
+        runId,
+        key: payload.key,
+        value: payload.value,
+        step: payload.step,
+      },
+    });
+
+    this.auditService.log('run.metric_create', 'run_metric', metric.id);
+    return metric;
   }
 }

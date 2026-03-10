@@ -60,3 +60,11 @@ Use this log for reproducible implementation history. Each entry should capture 
   - documentation update only
 - Result: Branching rules are explicit and setup instructions now match actual npm + Docker workflow.
 - Follow-up: Create `feat/run-params-metrics` and implement run param/metric endpoints.
+## 2026-03-10 07:55 CST
+- Summary: Implemented run parameter and metric endpoints in the runs module.
+- Files changed: `apps/api/src/modules/runs/*`, `apps/api/test/runs.service.spec.ts`
+- Commands run:
+  - `npm run build`
+  - `npm run test`
+- Result: Build passed and test suites passed (11 tests total), including new coverage for param upsert and metric creation.
+- Follow-up: Add integration tests that exercise params/metrics against a live migrated database.
