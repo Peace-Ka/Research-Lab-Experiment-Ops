@@ -1,4 +1,6 @@
 import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
+import { CreateRunMetricDto } from './dto/create-run-metric.dto';
+import { CreateRunParamDto } from './dto/create-run-param.dto';
 import { CreateRunDto } from './dto/create-run.dto';
 import { UpdateRunStatusDto } from './dto/update-run-status.dto';
 import { RunsService } from './runs.service';
@@ -33,5 +35,23 @@ export class RunsController {
     @Body() payload: UpdateRunStatusDto,
   ) {
     return this.runsService.updateStatus(workspaceId, runId, payload);
+  }
+
+  @Post('workspaces/:workspaceId/runs/:runId/params')
+  upsertParam(
+    @Param('workspaceId') workspaceId: string,
+    @Param('runId') runId: string,
+    @Body() payload: CreateRunParamDto,
+  ) {
+    return this.runsService.upsertParam(workspaceId, runId, payload);
+  }
+
+  @Post('workspaces/:workspaceId/runs/:runId/metrics')
+  addMetric(
+    @Param('workspaceId') workspaceId: string,
+    @Param('runId') runId: string,
+    @Body() payload: CreateRunMetricDto,
+  ) {
+    return this.runsService.addMetric(workspaceId, runId, payload);
   }
 }

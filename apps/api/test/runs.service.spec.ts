@@ -13,6 +13,12 @@ describe('RunsService', () => {
       create: jest.fn(),
       update: jest.fn(),
     },
+    runParam: {
+      upsert: jest.fn(),
+    },
+    runMetric: {
+      create: jest.fn(),
+    },
   };
   const audit = { log: jest.fn() };
   const service = new RunsService(prisma as any, audit as any);
@@ -35,6 +41,14 @@ describe('RunsService', () => {
         runNumber: 3,
         status: RunStatus.queued,
         createdById: 'user_1',
+        codeRef: undefined,
+        envSnapshot: undefined,
+        randomSeed: undefined,
+        datasetId: undefined,
+        datasetVersionId: undefined,
+        modelId: undefined,
+        modelVersionId: undefined,
+        notes: undefined,
       },
     });
     expect(audit.log).toHaveBeenCalledWith('run.create', 'run', 'run_3');
@@ -44,5 +58,33 @@ describe('RunsService', () => {
   it('throws when the run is missing', async () => {
     prisma.experimentRun.findFirst.mockResolvedValue(null);
     await expect(service.findOne('ws_1', 'missing')).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('upserts a run parameter', async () => {
+    prisma.experimentRun.findFirst.mockResolvedValue({ id: 'run_1', workspaceId: 'ws_1' });
+    prisma.runParam.upsert.mockResolvedValue({ runId: 'run_1', key: 'lr', value: '0.001' });
+
+    const result = await service.upsertParam('ws_1', 'run_1', { key: 'lr', value: '0.001' });
+
+    expect(prisma.runParam.upsert).toHaveBeenCalledWith({
+      where: { runId_key: { runId: 'run_1', key: 'lr' } },
+      update: { value: '0.001' },
+      create: { runId: 'run_1', key: 'lr', value: '0.001' },
+    });
+    expect(audit.log).toHaveBeenCalledWith('run.param_upsert', 'run_param', 'run_1:lr');
+    expect(result.key).toBe('lr');
+  });
+
+  it('creates a run metric', async () => {
+    prisma.experimentRun.findFirst.mockResolvedValue({ id: 'run_1', workspaceId: 'ws_1' });
+    prisma.runMetric.create.mockResolvedValue({ id: 'metric_1', runId: 'run_1', key: 'accuracy', value: 0.93 });
+
+    const result = await service.addMetric('ws_1', 'run_1', { key: 'accuracy', value: 0.93, step: 10 });
+
+    expect(prisma.runMetric.create).toHaveBeenCalledWith({
+      data: { runId: 'run_1', key: 'accuracy', value: 0.93, step: 10 },
+    });
+    expect(audit.log).toHaveBeenCalledWith('run.metric_create', 'run_metric', 'metric_1');
+    expect(result.id).toBe('metric_1');
   });
 });
