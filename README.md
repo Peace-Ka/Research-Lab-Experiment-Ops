@@ -1,4 +1,4 @@
-﻿# Lab Experiment Ops Platform
+# Lab Experiment Ops Platform
 
 Production-oriented monorepo scaffold for a research lab experiment operations platform.
 

@@ -1,4 +1,4 @@
-﻿# Week 1 Deliverables
+# Week 1 Deliverables
 
 ## Goal
 Ship a production-grade foundation for a lab experiment operations platform focused on reproducibility and collaboration.
@@ -17,16 +17,18 @@ Ship a production-grade foundation for a lab experiment operations platform focu
 4. Baseline docs committed:
    - architecture overview
    - folder structure
+   - build log
    - week 1 plan
    - changelog
    - work log
-5. Initial executable backend slice scaffolded:
+5. Initial executable backend slice scaffolded and partially wired to Prisma:
    - NestJS app shell
    - health endpoint
-   - auth module
-   - workspaces module
-   - projects module
+   - auth module scaffold
+   - workspaces CRUD backed by Prisma
+   - projects CRUD backed by Prisma
    - Prisma seed placeholder
+   - migration generation path documented
 6. Baseline operational quality requirements defined:
    - RBAC roles
    - audit logging for all mutations
@@ -35,13 +37,13 @@ Ship a production-grade foundation for a lab experiment operations platform focu
 
 ## Acceptance Criteria
 - Folder structure exists as specified in `docs/folder-structure.md`.
-- Prisma schema validates once Node and Prisma are installed.
+- Prisma schema validates and generates a client.
 - Every route in `docs/api-route-list.md` maps to a bounded context module.
 - Backend source scaffold exists for the first delivery slice.
-- Changelog and work log record the scaffold work.
+- Build log and work log record the scaffold work.
 
 ## Out of Scope
-- Full endpoint implementation.
-- Full frontend beyond initial shell.
+- Full auth implementation.
+- Frontend UI beyond initial shell.
 - ML training orchestration.
 - Production deployment.

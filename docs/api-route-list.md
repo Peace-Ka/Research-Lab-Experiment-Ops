@@ -1,4 +1,4 @@
-﻿# API Route List (v1)
+# API Route List (v1)
 
 ## Auth
 - POST `/v1/auth/register`
@@ -14,8 +14,10 @@
 
 ## Workspaces and Membership
 - POST `/v1/workspaces`
+- GET `/v1/workspaces`
 - GET `/v1/workspaces/:workspaceId`
 - PATCH `/v1/workspaces/:workspaceId`
+- DELETE `/v1/workspaces/:workspaceId`
 - GET `/v1/workspaces/:workspaceId/members`
 - POST `/v1/workspaces/:workspaceId/members`
 - PATCH `/v1/workspaces/:workspaceId/members/:memberId`
@@ -26,6 +28,7 @@
 - POST `/v1/workspaces/:workspaceId/projects`
 - GET `/v1/workspaces/:workspaceId/projects/:projectId`
 - PATCH `/v1/workspaces/:workspaceId/projects/:projectId`
+- DELETE `/v1/workspaces/:workspaceId/projects/:projectId`
 
 ## Datasets
 - GET `/v1/workspaces/:workspaceId/datasets`
