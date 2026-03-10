@@ -53,3 +53,10 @@ Use this log for reproducible implementation history. Each entry should capture 
   - `npm run prisma:seed`
 - Result: Postgres/Redis/MinIO running, migration applied successfully, Prisma client regenerated, seed script executed.
 - Follow-up: Add real seed data and run API against live DB-backed endpoints.
+## 2026-03-10 07:35 CST
+- Summary: Added branching policy documentation and corrected local setup instructions.
+- Files changed: `README.md`, `docs/branching.md`, `docs/work-log.md`
+- Commands run:
+  - documentation update only
+- Result: Branching rules are explicit and setup instructions now match actual npm + Docker workflow.
+- Follow-up: Create `feat/run-params-metrics` and implement run param/metric endpoints.

@@ -19,6 +19,12 @@ Production-oriented monorepo scaffold for a research lab experiment operations p
 ## Folder Structure
 See `docs/folder-structure.md`.
 
+## Build Log
+See `docs/build-log.md`.
+
+## Branching Workflow
+See `docs/branching.md`.
+
 ## Week 1 Focus
 See `docs/week-1-deliverables.md`.
 
@@ -28,14 +34,13 @@ See `docs/api-route-list.md`.
 ## Database Model
 See `prisma/schema.prisma`.
 
-## Local Setup (once toolchain is installed)
-1. Install Node.js 22+ and pnpm.
-2. Install PostgreSQL 16+.
-3. Copy `.env.example` to `.env` and fill values.
-4. Run `pnpm install`.
-5. Run `pnpm prisma migrate dev`.
-6. Run `pnpm dev`.
+## Local Setup
+1. Install Node.js 22+ and Docker Desktop.
+2. Copy `.env.example` to `.env`.
+3. Run `npm install`.
+4. Start local services with `docker compose -f infra/docker/docker-compose.dev.yml up -d`.
+5. Run `npm run prisma:generate`.
+6. Run `npm run build` and `npm run test`.
 
 ## Notes
-- Folder name remains as-is for continuity, but project scope is now Lab Experiment Ops.
-- Use `docs/work-log.md` and `CHANGELOG.md` to track all iterations.
+- Use `docs/work-log.md`, `docs/build-log.md`, and `CHANGELOG.md` to keep history reproducible.

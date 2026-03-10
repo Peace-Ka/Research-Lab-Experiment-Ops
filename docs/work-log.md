@@ -15,3 +15,4 @@
 - Node.js is installed locally and dependencies are installed in the repo.
 - Health e2e is kept database-light; Prisma-backed services are validated through client generation and unit tests.
 - Applied initial Prisma migration to live local Postgres via Docker and ran seed placeholder script.
+- Added documented branching workflow in docs/branching.md and aligned README commands with npm + Docker local setup.
