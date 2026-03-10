@@ -8,3 +8,4 @@
 - Added root workspace package config and NestJS API source scaffold for health, auth, workspaces, and projects.
 - Added Prisma seed and test placeholders for the first executable backend slice.
 - Added reproducible `docs/build-log.md` and wired workspaces/projects services to Prisma CRUD.
+- Added Prisma-backed experiment and run CRUD slices with unit test coverage.

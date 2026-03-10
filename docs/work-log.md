@@ -9,7 +9,9 @@
 - Added Prisma seed placeholder and e2e test scaffold.
 - Added `docs/build-log.md` as the reproducible implementation log for all future changes.
 - Wired `workspaces` and `projects` services to Prisma-backed CRUD and added unit coverage for both services.
+- Implemented Prisma-backed experiment and run service layers with controllers and unit coverage.
 
 ## Notes
 - Node.js is installed locally and dependencies are installed in the repo.
 - Health e2e is kept database-light; Prisma-backed services are validated through client generation and unit tests.
+- Docker and `psql` are not available in this shell, so migration application to a live database is still pending.

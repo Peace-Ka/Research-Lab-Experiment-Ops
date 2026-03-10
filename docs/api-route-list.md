@@ -30,6 +30,18 @@
 - PATCH `/v1/workspaces/:workspaceId/projects/:projectId`
 - DELETE `/v1/workspaces/:workspaceId/projects/:projectId`
 
+## Experiments
+- GET `/v1/workspaces/:workspaceId/projects/:projectId/experiments`
+- POST `/v1/workspaces/:workspaceId/projects/:projectId/experiments`
+- GET `/v1/workspaces/:workspaceId/experiments/:experimentId`
+- PATCH `/v1/workspaces/:workspaceId/experiments/:experimentId`
+
+## Runs
+- GET `/v1/workspaces/:workspaceId/experiments/:experimentId/runs`
+- POST `/v1/workspaces/:workspaceId/experiments/:experimentId/runs`
+- GET `/v1/workspaces/:workspaceId/runs/:runId`
+- PATCH `/v1/workspaces/:workspaceId/runs/:runId/status`
+
 ## Datasets
 - GET `/v1/workspaces/:workspaceId/datasets`
 - POST `/v1/workspaces/:workspaceId/datasets`
@@ -41,18 +53,6 @@
 - POST `/v1/workspaces/:workspaceId/models`
 - POST `/v1/workspaces/:workspaceId/models/:modelId/versions`
 - GET `/v1/workspaces/:workspaceId/models/:modelId/versions`
-
-## Experiments and Runs
-- GET `/v1/workspaces/:workspaceId/projects/:projectId/experiments`
-- POST `/v1/workspaces/:workspaceId/projects/:projectId/experiments`
-- GET `/v1/workspaces/:workspaceId/experiments/:experimentId`
-- PATCH `/v1/workspaces/:workspaceId/experiments/:experimentId`
-- POST `/v1/workspaces/:workspaceId/experiments/:experimentId/runs`
-- GET `/v1/workspaces/:workspaceId/experiments/:experimentId/runs`
-- GET `/v1/workspaces/:workspaceId/runs/:runId`
-- PATCH `/v1/workspaces/:workspaceId/runs/:runId/status`
-- POST `/v1/workspaces/:workspaceId/runs/:runId/params`
-- POST `/v1/workspaces/:workspaceId/runs/:runId/metrics`
 
 ## Artifacts and Lineage
 - POST `/v1/workspaces/:workspaceId/runs/:runId/artifacts/upload-url`

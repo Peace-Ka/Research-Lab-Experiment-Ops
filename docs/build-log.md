@@ -33,3 +33,13 @@ Use this log for reproducible implementation history. Each entry should capture 
   - `npx prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma --script`
 - Result: Prisma schema stays valid, CRUD services compile, tests cover service behavior, and initial migration SQL is generated.
 - Follow-up: Run `prisma migrate dev` against a live Postgres instance to apply the migration and start wiring auth persistence.
+
+## 2026-03-10 03:25 CST
+- Summary: Added experiment and run modules with Prisma-backed CRUD service logic and unit tests.
+- Files changed: `apps/api/src/app.module.ts`, `apps/api/src/modules/experiments/*`, `apps/api/src/modules/runs/*`, `apps/api/test/*`, `docs/*`, `CHANGELOG.md`
+- Commands run:
+  - `npm run build`
+  - `npm run test`
+  - `npm run test:e2e --workspace @labops/api`
+- Result: Experiment and run modules compile and unit tests validate creation, lookup, and run-number sequencing behavior.
+- Follow-up: Add param/metric logging endpoints and start persisting auth/users.
