@@ -43,3 +43,13 @@ Use this log for reproducible implementation history. Each entry should capture 
   - `npm run test:e2e --workspace @labops/api`
 - Result: Experiment and run modules compile and unit tests validate creation, lookup, and run-number sequencing behavior.
 - Follow-up: Add param/metric logging endpoints and start persisting auth/users.
+## 2026-03-10 07:15 CST
+- Summary: Started live local infrastructure and applied first Prisma migration to real Postgres.
+- Files changed: `.env`, `prisma/migrations/20260310_init/migration.sql`
+- Commands run:
+  - `docker compose -f infra/docker/docker-compose.dev.yml up -d`
+  - `docker ps`
+  - `prisma migrate dev --name init --schema prisma/schema.prisma`
+  - `npm run prisma:seed`
+- Result: Postgres/Redis/MinIO running, migration applied successfully, Prisma client regenerated, seed script executed.
+- Follow-up: Add real seed data and run API against live DB-backed endpoints.
