@@ -1,4 +1,4 @@
-﻿generator client {
+generator client {
   provider = "prisma-client-js"
 }
 
@@ -72,282 +72,284 @@ model User {
 }
 
 model Workspace {
-  id            String                @id @default(cuid())
-  name          String
-  slug          String                @unique
-  description   String?
-  createdAt     DateTime              @default(now())
-  updatedAt     DateTime              @updatedAt
+  id             String                @id @default(cuid())
+  name           String
+  slug           String                @unique
+  description    String?
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
 
-  memberships   WorkspaceMembership[]
-  projects      Project[]
-  datasets      Dataset[]
-  models        MlModel[]
+  memberships    WorkspaceMembership[]
+  projects       Project[]
+  datasets       Dataset[]
+  models         MlModel[]
+  experiments    Experiment[]
+  runs           ExperimentRun[]
   checklistItems ReproChecklistItem[]
-  auditLogs     AuditLog[]
-  reports       ReportExport[]
+  auditLogs      AuditLog[]
+  reports        ReportExport[]
 }
 
 model WorkspaceMembership {
-  id           String                     @id @default(cuid())
-  workspaceId  String
-  userId       String
-  role         WorkspaceRole
-  status       WorkspaceMembershipStatus  @default(active)
-  createdAt    DateTime                   @default(now())
+  id          String                     @id @default(cuid())
+  workspaceId String
+  userId      String
+  role        WorkspaceRole
+  status      WorkspaceMembershipStatus  @default(active)
+  createdAt   DateTime                   @default(now())
 
-  workspace    Workspace                  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  user         User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace   Workspace                  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([workspaceId, userId])
   @@index([userId])
 }
 
 model Project {
-  id            String       @id @default(cuid())
-  workspaceId   String
-  name          String
-  description   String?
-  ownerUserId   String?
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+  id           String       @id @default(cuid())
+  workspaceId  String
+  name         String
+  description  String?
+  ownerUserId  String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
 
-  workspace     Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  owner         User?        @relation("projectOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
-  experiments   Experiment[]
+  workspace    Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  owner        User?        @relation("projectOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
+  experiments  Experiment[]
 
   @@unique([workspaceId, name])
   @@index([ownerUserId])
 }
 
 model Dataset {
-  id            String           @id @default(cuid())
-  workspaceId   String
-  name          String
-  description   String?
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
+  id           String           @id @default(cuid())
+  workspaceId  String
+  name         String
+  description  String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
 
-  workspace     Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  versions      DatasetVersion[]
-  runs          ExperimentRun[]
+  workspace    Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  versions     DatasetVersion[]
+  runs         ExperimentRun[]
 
   @@unique([workspaceId, name])
 }
 
 model DatasetVersion {
-  id             String      @id @default(cuid())
+  id             String          @id @default(cuid())
   datasetId      String
   versionLabel   String
   storageKey     String
   checksumSha256 String
   schemaJson     Json?
-  createdAt      DateTime    @default(now())
+  createdAt      DateTime        @default(now())
 
-  dataset        Dataset     @relation(fields: [datasetId], references: [id], onDelete: Cascade)
+  dataset        Dataset         @relation(fields: [datasetId], references: [id], onDelete: Cascade)
   runs           ExperimentRun[] @relation("runDatasetVersion")
 
   @@unique([datasetId, versionLabel])
 }
 
 model MlModel {
-  id            String         @id @default(cuid())
-  workspaceId   String
-  name          String
-  description   String?
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  id           String         @id @default(cuid())
+  workspaceId  String
+  name         String
+  description  String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
 
-  workspace     Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  versions      ModelVersion[]
-  runs          ExperimentRun[]
+  workspace    Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  versions     ModelVersion[]
+  runs         ExperimentRun[]
 
   @@unique([workspaceId, name])
 }
 
 model ModelVersion {
-  id             String      @id @default(cuid())
+  id             String          @id @default(cuid())
   modelId        String
   versionLabel   String
   storageKey     String
   checksumSha256 String
-  createdAt      DateTime    @default(now())
+  createdAt      DateTime        @default(now())
 
-  model          MlModel     @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  model          MlModel         @relation(fields: [modelId], references: [id], onDelete: Cascade)
   runs           ExperimentRun[] @relation("runModelVersion")
 
   @@unique([modelId, versionLabel])
 }
 
 model Experiment {
-  id             String          @id @default(cuid())
-  workspaceId    String
-  projectId      String
-  title          String
-  hypothesis     String?
-  createdById    String
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
+  id          String          @id @default(cuid())
+  workspaceId String
+  projectId   String
+  title       String
+  hypothesis  String?
+  createdById String
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
 
-  workspace      Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  project        Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  createdBy      User            @relation("experimentCreator", fields: [createdById], references: [id], onDelete: Restrict)
-  runs           ExperimentRun[]
+  workspace   Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  project     Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdBy   User            @relation("experimentCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  runs        ExperimentRun[]
 
   @@index([workspaceId, projectId])
 }
 
 model ExperimentRun {
-  id                 String           @id @default(cuid())
-  workspaceId        String
-  experimentId       String
-  runNumber          Int
-  status             RunStatus        @default(queued)
-  codeRef            String?
-  envSnapshot        Json?
-  randomSeed         Int?
-  startedAt          DateTime?
-  endedAt            DateTime?
-  createdById        String
-  datasetId          String?
-  datasetVersionId   String?
-  modelId            String?
-  modelVersionId     String?
-  notes              String?
-  createdAt          DateTime         @default(now())
-  updatedAt          DateTime         @updatedAt
+  id               String              @id @default(cuid())
+  workspaceId      String
+  experimentId     String
+  runNumber        Int
+  status           RunStatus           @default(queued)
+  codeRef          String?
+  envSnapshot      Json?
+  randomSeed       Int?
+  startedAt        DateTime?
+  endedAt          DateTime?
+  createdById      String
+  datasetId        String?
+  datasetVersionId String?
+  modelId          String?
+  modelVersionId   String?
+  notes            String?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
 
-  workspace          Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  experiment         Experiment       @relation(fields: [experimentId], references: [id], onDelete: Cascade)
-  createdBy          User             @relation("runCreator", fields: [createdById], references: [id], onDelete: Restrict)
-  dataset            Dataset?         @relation(fields: [datasetId], references: [id], onDelete: SetNull)
-  datasetVersion     DatasetVersion?  @relation("runDatasetVersion", fields: [datasetVersionId], references: [id], onDelete: SetNull)
-  model              MlModel?         @relation(fields: [modelId], references: [id], onDelete: SetNull)
-  modelVersion       ModelVersion?    @relation("runModelVersion", fields: [modelVersionId], references: [id], onDelete: SetNull)
-  params             RunParam[]
-  metrics            RunMetric[]
-  artifacts          Artifact[]
-  parentLinks        RunLineage[]     @relation("runChild")
-  childLinks         RunLineage[]     @relation("runParent")
-  checklistStates    RunChecklistState[]
-  reviews            RunReview[]
+  workspace        Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  experiment       Experiment          @relation(fields: [experimentId], references: [id], onDelete: Cascade)
+  createdBy        User                @relation("runCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  dataset          Dataset?            @relation(fields: [datasetId], references: [id], onDelete: SetNull)
+  datasetVersion   DatasetVersion?     @relation("runDatasetVersion", fields: [datasetVersionId], references: [id], onDelete: SetNull)
+  model            MlModel?            @relation(fields: [modelId], references: [id], onDelete: SetNull)
+  modelVersion     ModelVersion?       @relation("runModelVersion", fields: [modelVersionId], references: [id], onDelete: SetNull)
+  params           RunParam[]
+  metrics          RunMetric[]
+  artifacts        Artifact[]
+  parentLinks      RunLineage[]        @relation("runChild")
+  childLinks       RunLineage[]        @relation("runParent")
+  checklistStates  RunChecklistState[]
+  reviews          RunReview[]
 
   @@unique([experimentId, runNumber])
   @@index([workspaceId, status])
 }
 
 model RunParam {
-  id         String         @id @default(cuid())
-  runId      String
-  key        String
-  value      String
+  id    String        @id @default(cuid())
+  runId String
+  key   String
+  value String
 
-  run        ExperimentRun  @relation(fields: [runId], references: [id], onDelete: Cascade)
+  run   ExperimentRun @relation(fields: [runId], references: [id], onDelete: Cascade)
 
   @@unique([runId, key])
 }
 
 model RunMetric {
-  id         String         @id @default(cuid())
-  runId      String
-  key        String
-  value      Float
-  step       Int?
-  loggedAt   DateTime       @default(now())
+  id       String        @id @default(cuid())
+  runId    String
+  key      String
+  value    Float
+  step     Int?
+  loggedAt DateTime      @default(now())
 
-  run        ExperimentRun  @relation(fields: [runId], references: [id], onDelete: Cascade)
+  run      ExperimentRun @relation(fields: [runId], references: [id], onDelete: Cascade)
 
   @@index([runId, key, loggedAt])
 }
 
 model Artifact {
-  id             String         @id @default(cuid())
+  id             String        @id @default(cuid())
   runId          String
   type           ArtifactType
   fileName       String
   storageKey     String
   checksumSha256 String
   sizeBytes      BigInt?
-  uploadedAt     DateTime       @default(now())
+  uploadedAt     DateTime      @default(now())
 
-  run            ExperimentRun  @relation(fields: [runId], references: [id], onDelete: Cascade)
+  run            ExperimentRun @relation(fields: [runId], references: [id], onDelete: Cascade)
 
   @@index([runId, type])
 }
 
 model RunLineage {
-  id            String         @id @default(cuid())
-  parentRunId   String
-  childRunId    String
-  relationType  String         @default("derived")
-  createdAt     DateTime       @default(now())
+  id           String        @id @default(cuid())
+  parentRunId  String
+  childRunId   String
+  relationType String        @default("derived")
+  createdAt    DateTime      @default(now())
 
-  parentRun     ExperimentRun  @relation("runParent", fields: [parentRunId], references: [id], onDelete: Cascade)
-  childRun      ExperimentRun  @relation("runChild", fields: [childRunId], references: [id], onDelete: Cascade)
+  parentRun    ExperimentRun @relation("runParent", fields: [parentRunId], references: [id], onDelete: Cascade)
+  childRun     ExperimentRun @relation("runChild", fields: [childRunId], references: [id], onDelete: Cascade)
 
   @@unique([parentRunId, childRunId])
 }
 
 model ReproChecklistItem {
-  id            String              @id @default(cuid())
-  workspaceId   String
-  code          String
-  label         String
-  description   String?
-  isRequired    Boolean             @default(true)
+  id          String              @id @default(cuid())
+  workspaceId String
+  code        String
+  label       String
+  description String?
+  isRequired  Boolean             @default(true)
 
-  workspace     Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  runStates     RunChecklistState[]
+  workspace   Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  runStates   RunChecklistState[]
 
   @@unique([workspaceId, code])
 }
 
 model RunChecklistState {
-  id               String             @id @default(cuid())
-  runId            String
-  checklistItemId  String
-  status           ChecklistStatus    @default(pending)
-  note             String?
-  updatedAt        DateTime           @updatedAt
+  id              String             @id @default(cuid())
+  runId           String
+  checklistItemId String
+  status          ChecklistStatus    @default(pending)
+  note            String?
+  updatedAt       DateTime           @updatedAt
 
-  run              ExperimentRun      @relation(fields: [runId], references: [id], onDelete: Cascade)
-  checklistItem    ReproChecklistItem @relation(fields: [checklistItemId], references: [id], onDelete: Cascade)
+  run             ExperimentRun      @relation(fields: [runId], references: [id], onDelete: Cascade)
+  checklistItem   ReproChecklistItem @relation(fields: [checklistItemId], references: [id], onDelete: Cascade)
 
   @@unique([runId, checklistItemId])
 }
 
 model RunReview {
-  id             String         @id @default(cuid())
-  runId          String
-  requestedById  String
-  reviewerId     String?
-  status         ReviewStatus   @default(requested)
-  comment        String?
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  id            String        @id @default(cuid())
+  runId         String
+  requestedById String
+  reviewerId    String?
+  status        ReviewStatus  @default(requested)
+  comment       String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 
-  run            ExperimentRun  @relation(fields: [runId], references: [id], onDelete: Cascade)
-  requestedBy    User           @relation("reviewRequester", fields: [requestedById], references: [id], onDelete: Restrict)
-  reviewer       User?          @relation("reviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
+  run           ExperimentRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  requestedBy   User          @relation("reviewRequester", fields: [requestedById], references: [id], onDelete: Restrict)
+  reviewer      User?         @relation("reviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
 
   @@index([runId, status])
 }
 
 model AuditLog {
-  id            String      @id @default(cuid())
-  workspaceId   String
-  actorUserId   String?
-  action        String
-  entityType    String
-  entityId      String
-  beforeJson    Json?
-  afterJson     Json?
-  ip            String?
-  userAgent     String?
-  createdAt     DateTime    @default(now())
+  id          String      @id @default(cuid())
+  workspaceId String
+  actorUserId String?
+  action      String
+  entityType  String
+  entityId    String
+  beforeJson  Json?
+  afterJson   Json?
+  ip          String?
+  userAgent   String?
+  createdAt   DateTime    @default(now())
 
-  workspace     Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  actor         User?       @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+  workspace   Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  actor       User?       @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
 
   @@index([workspaceId, createdAt])
 }
