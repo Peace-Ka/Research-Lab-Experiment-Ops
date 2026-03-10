@@ -1,0 +1,60 @@
+﻿# Production Folder Structure
+
+```txt
+lab-experiment-ops/
+  apps/
+    web/
+      src/
+      public/
+      tests-e2e/
+    api/
+      src/
+        modules/
+          auth/
+          users/
+          audit/
+          notifications/
+          reports/
+          workspaces/
+          projects/
+          experiments/
+          runs/
+          datasets/
+          models/
+          artifacts/
+          lineage/
+          reviews/
+          templates/
+        common/
+        config/
+      test/
+    worker/
+      src/
+  packages/
+    ui/
+    types/
+    config/
+    sdk/
+  infra/
+    docker/
+      docker-compose.dev.yml
+    terraform/
+    k8s/
+  prisma/
+    schema.prisma
+    migrations/
+  docs/
+    architecture.md
+    api-route-list.md
+    week-1-deliverables.md
+    work-log.md
+    repo-bootstrap.md
+  scripts/
+  .github/
+    workflows/
+      ci.yml
+      cd.yml
+  .env.example
+  README.md
+  CHANGELOG.md
+```

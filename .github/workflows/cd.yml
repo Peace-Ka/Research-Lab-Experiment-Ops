@@ -1,0 +1,10 @@
+﻿name: CD
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy-placeholder:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Add deployment steps once hosting target is selected"
