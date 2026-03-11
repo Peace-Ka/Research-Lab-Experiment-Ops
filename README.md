@@ -41,6 +41,7 @@ See `prisma/schema.prisma`.
 4. Start local services with `docker compose -f infra/docker/docker-compose.dev.yml up -d`.
 5. Run `npm run prisma:generate`.
 6. Run `npm run build` and `npm run test`.
+7. For DB-backed integration tests, start Docker services with `npm run docker:up` and run `npm run test:integration`.
 
 ## Notes
 - Use `docs/work-log.md`, `docs/build-log.md`, and `CHANGELOG.md` to keep history reproducible.
