@@ -68,3 +68,12 @@ Use this log for reproducible implementation history. Each entry should capture 
   - `npm run test`
 - Result: Build passed and test suites passed (11 tests total), including new coverage for param upsert and metric creation.
 - Follow-up: Add integration tests that exercise params/metrics against a live migrated database.
+## 2026-03-11 08:05 CST
+- Summary: Added live DB-backed integration coverage for run param and metric endpoints and hardened Jest execution for Windows/local sandbox reliability.
+- Files changed: `apps/api/test/runs.integration.e2e-spec.ts`, `apps/api/package.json`, `apps/api/test/jest-unit.json`, `apps/api/test/jest-e2e.json`, `package.json`, `README.md`, `docs/build-log.md`, `docs/work-log.md`, `CHANGELOG.md`
+- Commands run:
+  - `npm run build`
+  - `npm run test`
+  - `npm run test:integration`
+- Result: Unit tests pass in-band, integration tests pass against live Docker-backed Postgres, and the root workflow now separates unit and integration execution cleanly.
+- Follow-up: Seed richer demo data and add auth/user persistence to eliminate synthetic IDs.

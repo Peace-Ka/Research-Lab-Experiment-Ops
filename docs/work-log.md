@@ -17,3 +17,5 @@
 - Applied initial Prisma migration to live local Postgres via Docker and ran seed placeholder script.
 - Added documented branching workflow in docs/branching.md and aligned README commands with npm + Docker local setup.
 - Implemented run parameter and metric endpoints with Prisma persistence and added service-level unit tests for both.
+- Added live DB-backed integration coverage for run param and metric endpoints using Docker Postgres and Prisma.
+- Hardened Jest unit/e2e execution to run in-band so validation is stable on Windows and in constrained environments.

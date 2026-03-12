@@ -12,3 +12,4 @@
 - Applied initial Prisma migration to local Docker Postgres and executed seed placeholder.
 - Documented branching workflow and aligned README local setup commands with npm + Docker usage.
 - Implemented run parameter and metric endpoints with Prisma persistence and test coverage.
+- Added live DB-backed integration coverage for run param and metric endpoints.
