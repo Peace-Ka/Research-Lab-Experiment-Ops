@@ -31,3 +31,5 @@
 - Added explicit run selection and wired parameter/metric creation forms to the selected run detail panel.
 - Added seeded reproducibility checklist items/states so demo runs now show readiness rather than empty checklist scaffolding.
 - Added run status editing and checklist state editing in the run detail panel to support an actual run-governance workflow.
+- Added artifact registration to the run workflow so runs now carry evidence records with type, checksum, size, and storage key.
+- Seeded demo artifacts and surfaced them in the run detail panel alongside metrics, params, and checklist state.

@@ -27,3 +27,5 @@
 - Added explicit run selection plus live param and metric entry from the run detail panel.
 - Added seeded reproducibility checklist data and surfaced checklist state in the run detail UI.
 - Added run lifecycle status editing and checklist status updates from the frontend.
+- Added run artifact registration with backend metadata persistence and UI evidence listing.
+- Seeded demo artifacts and exposed artifact registration from the run detail panel.

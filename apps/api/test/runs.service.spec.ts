@@ -1,5 +1,5 @@
 import { NotFoundException } from '@nestjs/common';
-import { ChecklistStatus, RunStatus } from '@prisma/client';
+import { ArtifactType, ChecklistStatus, RunStatus } from '@prisma/client';
 import { RunsService } from '../src/modules/runs/runs.service';
 
 describe('RunsService', () => {
@@ -20,6 +20,9 @@ describe('RunsService', () => {
       upsert: jest.fn(),
     },
     runMetric: {
+      create: jest.fn(),
+    },
+    artifact: {
       create: jest.fn(),
     },
     runChecklistState: {
@@ -103,6 +106,38 @@ describe('RunsService', () => {
     });
     expect(audit.log).toHaveBeenCalledWith('run.metric_create', 'run_metric', 'metric_1');
     expect(result.id).toBe('metric_1');
+  });
+
+  it('creates an artifact record for a run', async () => {
+    workspaceAccess.requireMembership.mockResolvedValue({ role: 'researcher' });
+    prisma.experimentRun.findFirst.mockResolvedValue({ id: 'run_1', workspaceId: 'ws_1' });
+    prisma.artifact.create.mockResolvedValue({ id: 'artifact_1', fileName: 'loss-curve.png', runId: 'run_1' });
+
+    const result = await service.addArtifact(
+      'ws_1',
+      'run_1',
+      {
+        type: ArtifactType.plot,
+        fileName: 'loss-curve.png',
+        storageKey: 'local-demo/run_1/loss-curve.png',
+        checksumSha256: 'abc123',
+        sizeBytes: 2048,
+      },
+      'user_1',
+    );
+
+    expect(prisma.artifact.create).toHaveBeenCalledWith({
+      data: {
+        runId: 'run_1',
+        type: ArtifactType.plot,
+        fileName: 'loss-curve.png',
+        storageKey: 'local-demo/run_1/loss-curve.png',
+        checksumSha256: 'abc123',
+        sizeBytes: BigInt(2048),
+      },
+    });
+    expect(audit.log).toHaveBeenCalledWith('run.artifact_create', 'artifact', 'artifact_1');
+    expect(result.id).toBe('artifact_1');
   });
 
   it('upserts a checklist state', async () => {

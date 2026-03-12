@@ -3,6 +3,7 @@ import { Prisma, RunStatus, WorkspaceRole } from '@prisma/client';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { WorkspaceAccessService } from '../workspaces/workspace-access.service';
+import { CreateRunArtifactDto } from './dto/create-run-artifact.dto';
 import { CreateRunMetricDto } from './dto/create-run-metric.dto';
 import { CreateRunParamDto } from './dto/create-run-param.dto';
 import { CreateRunDto } from './dto/create-run.dto';
@@ -16,6 +17,20 @@ export class RunsService {
     private readonly auditService: AuditService,
     private readonly workspaceAccess: WorkspaceAccessService,
   ) {}
+
+  private normalizeArtifact<T extends { sizeBytes: bigint | null }>(artifact: T) {
+    return {
+      ...artifact,
+      sizeBytes: artifact.sizeBytes == null ? null : artifact.sizeBytes.toString(),
+    };
+  }
+
+  private normalizeRun<T extends { artifacts: Array<{ sizeBytes: bigint | null }> }>(run: T) {
+    return {
+      ...run,
+      artifacts: (run.artifacts ?? []).map((artifact) => this.normalizeArtifact(artifact)),
+    };
+  }
 
   async findAll(workspaceId: string, experimentId: string, userId: string) {
     await this.workspaceAccess.requireMembership(workspaceId, userId);
@@ -45,6 +60,9 @@ export class RunsService {
         metrics: {
           orderBy: [{ key: 'asc' }, { loggedAt: 'desc' }],
         },
+        artifacts: {
+          orderBy: [{ uploadedAt: 'desc' }, { fileName: 'asc' }],
+        },
         checklistStates: {
           include: {
             checklistItem: true,
@@ -62,7 +80,7 @@ export class RunsService {
       throw new NotFoundException(`Run ${runId} not found in workspace ${workspaceId}`);
     }
 
-    return run;
+    return this.normalizeRun(run);
   }
 
   async create(workspaceId: string, experimentId: string, payload: CreateRunDto, userId: string) {
@@ -181,6 +199,29 @@ export class RunsService {
     return metric;
   }
 
+  async addArtifact(workspaceId: string, runId: string, payload: CreateRunArtifactDto, userId: string) {
+    await this.workspaceAccess.requireMembership(workspaceId, userId, [
+      WorkspaceRole.owner,
+      WorkspaceRole.maintainer,
+      WorkspaceRole.researcher,
+    ]);
+    await this.findOne(workspaceId, runId, userId);
+
+    const artifact = await this.prisma.artifact.create({
+      data: {
+        runId,
+        type: payload.type,
+        fileName: payload.fileName,
+        storageKey: payload.storageKey,
+        checksumSha256: payload.checksumSha256,
+        sizeBytes: payload.sizeBytes === undefined ? undefined : BigInt(payload.sizeBytes),
+      },
+    });
+
+    this.auditService.log('run.artifact_create', 'artifact', artifact.id);
+    return this.normalizeArtifact(artifact);
+  }
+
   async updateChecklistState(
     workspaceId: string,
     runId: string,
@@ -222,3 +263,5 @@ export class RunsService {
     return checklistState;
   }
 }
+
+
