@@ -13,3 +13,10 @@
 - Documented branching workflow and aligned README local setup commands with npm + Docker usage.
 - Implemented run parameter and metric endpoints with Prisma persistence and test coverage.
 - Added live DB-backed integration coverage for run param and metric endpoints.
+
+## 2026-03-12
+- Replaced scaffold auth with persisted register/login and added `GET /auth/me`.
+- Added request-level user context via `x-user-id` and enforced active workspace memberships across workspace, project, experiment, and run services.
+- Removed client-controlled `createdById` from experiment and run creation payloads in favor of authenticated context.
+- Added a Next.js frontend with a live dashboard shell, onboarding/auth panel, projects view, and experiments view.
+- Added root web scripts and verified the frontend with a production build.

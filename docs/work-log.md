@@ -19,3 +19,6 @@
 - Implemented run parameter and metric endpoints with Prisma persistence and added service-level unit tests for both.
 - Added live DB-backed integration coverage for run param and metric endpoints using Docker Postgres and Prisma.
 - Hardened Jest unit/e2e execution to run in-band so validation is stable on Windows and in constrained environments.
+- Replaced scaffold auth with persisted register/login and added lightweight request-user context via the x-user-id header.
+- Added workspace membership enforcement across workspace, project, experiment, and run services.
+- Scaffolded a Next.js frontend with a live dashboard shell, projects view, experiment view, and onboarding panel connected to the API.

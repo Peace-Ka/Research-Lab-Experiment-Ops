@@ -1,6 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { WorkspaceRole } from '@prisma/client';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { WorkspaceAccessService } from '../workspaces/workspace-access.service';
 import { CreateExperimentDto } from './dto/create-experiment.dto';
 import { UpdateExperimentDto } from './dto/update-experiment.dto';
 
@@ -9,9 +11,12 @@ export class ExperimentsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
+    private readonly workspaceAccess: WorkspaceAccessService,
   ) {}
 
-  async findAll(workspaceId: string, projectId: string) {
+  async findAll(workspaceId: string, projectId: string, userId: string) {
+    await this.workspaceAccess.requireMembership(workspaceId, userId);
+
     const items = await this.prisma.experiment.findMany({
       where: { workspaceId, projectId },
       orderBy: { createdAt: 'desc' },
@@ -25,7 +30,9 @@ export class ExperimentsService {
     };
   }
 
-  async findOne(workspaceId: string, experimentId: string) {
+  async findOne(workspaceId: string, experimentId: string, userId: string) {
+    await this.workspaceAccess.requireMembership(workspaceId, userId);
+
     const experiment = await this.prisma.experiment.findFirst({
       where: { id: experimentId, workspaceId },
     });
@@ -37,13 +44,19 @@ export class ExperimentsService {
     return experiment;
   }
 
-  async create(workspaceId: string, projectId: string, payload: CreateExperimentDto) {
+  async create(workspaceId: string, projectId: string, payload: CreateExperimentDto, userId: string) {
+    await this.workspaceAccess.requireMembership(workspaceId, userId, [
+      WorkspaceRole.owner,
+      WorkspaceRole.maintainer,
+      WorkspaceRole.researcher,
+    ]);
     await this.prisma.project.findFirstOrThrow({ where: { id: projectId, workspaceId } });
 
     const experiment = await this.prisma.experiment.create({
       data: {
         workspaceId,
         projectId,
+        createdById: userId,
         ...payload,
       },
     });
@@ -52,8 +65,13 @@ export class ExperimentsService {
     return experiment;
   }
 
-  async update(workspaceId: string, experimentId: string, payload: UpdateExperimentDto) {
-    await this.findOne(workspaceId, experimentId);
+  async update(workspaceId: string, experimentId: string, payload: UpdateExperimentDto, userId: string) {
+    await this.workspaceAccess.requireMembership(workspaceId, userId, [
+      WorkspaceRole.owner,
+      WorkspaceRole.maintainer,
+      WorkspaceRole.researcher,
+    ]);
+    await this.findOne(workspaceId, experimentId, userId);
 
     const experiment = await this.prisma.experiment.update({
       where: { id: experimentId },

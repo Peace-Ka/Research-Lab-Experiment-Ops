@@ -1,7 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma, RunStatus } from '@prisma/client';
+import { Prisma, RunStatus, WorkspaceRole } from '@prisma/client';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { WorkspaceAccessService } from '../workspaces/workspace-access.service';
 import { CreateRunMetricDto } from './dto/create-run-metric.dto';
 import { CreateRunParamDto } from './dto/create-run-param.dto';
 import { CreateRunDto } from './dto/create-run.dto';
@@ -12,9 +13,12 @@ export class RunsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
+    private readonly workspaceAccess: WorkspaceAccessService,
   ) {}
 
-  async findAll(workspaceId: string, experimentId: string) {
+  async findAll(workspaceId: string, experimentId: string, userId: string) {
+    await this.workspaceAccess.requireMembership(workspaceId, userId);
+
     const items = await this.prisma.experimentRun.findMany({
       where: { workspaceId, experimentId },
       orderBy: { runNumber: 'desc' },
@@ -28,7 +32,9 @@ export class RunsService {
     };
   }
 
-  async findOne(workspaceId: string, runId: string) {
+  async findOne(workspaceId: string, runId: string, userId: string) {
+    await this.workspaceAccess.requireMembership(workspaceId, userId);
+
     const run = await this.prisma.experimentRun.findFirst({
       where: { id: runId, workspaceId },
     });
@@ -40,7 +46,12 @@ export class RunsService {
     return run;
   }
 
-  async create(workspaceId: string, experimentId: string, payload: CreateRunDto) {
+  async create(workspaceId: string, experimentId: string, payload: CreateRunDto, userId: string) {
+    await this.workspaceAccess.requireMembership(workspaceId, userId, [
+      WorkspaceRole.owner,
+      WorkspaceRole.maintainer,
+      WorkspaceRole.researcher,
+    ]);
     await this.prisma.experiment.findFirstOrThrow({ where: { id: experimentId, workspaceId } });
 
     const latestRun = await this.prisma.experimentRun.findFirst({
@@ -55,7 +66,7 @@ export class RunsService {
         experimentId,
         runNumber: (latestRun?.runNumber ?? 0) + 1,
         status: RunStatus.queued,
-        createdById: payload.createdById,
+        createdById: userId,
         codeRef: payload.codeRef,
         envSnapshot: payload.envSnapshot as Prisma.InputJsonValue | undefined,
         randomSeed: payload.randomSeed,
@@ -71,8 +82,13 @@ export class RunsService {
     return run;
   }
 
-  async updateStatus(workspaceId: string, runId: string, payload: UpdateRunStatusDto) {
-    await this.findOne(workspaceId, runId);
+  async updateStatus(workspaceId: string, runId: string, payload: UpdateRunStatusDto, userId: string) {
+    await this.workspaceAccess.requireMembership(workspaceId, userId, [
+      WorkspaceRole.owner,
+      WorkspaceRole.maintainer,
+      WorkspaceRole.researcher,
+    ]);
+    await this.findOne(workspaceId, runId, userId);
 
     const run = await this.prisma.experimentRun.update({
       where: { id: runId },
@@ -83,8 +99,13 @@ export class RunsService {
     return run;
   }
 
-  async upsertParam(workspaceId: string, runId: string, payload: CreateRunParamDto) {
-    await this.findOne(workspaceId, runId);
+  async upsertParam(workspaceId: string, runId: string, payload: CreateRunParamDto, userId: string) {
+    await this.workspaceAccess.requireMembership(workspaceId, userId, [
+      WorkspaceRole.owner,
+      WorkspaceRole.maintainer,
+      WorkspaceRole.researcher,
+    ]);
+    await this.findOne(workspaceId, runId, userId);
 
     const param = await this.prisma.runParam.upsert({
       where: {
@@ -107,8 +128,13 @@ export class RunsService {
     return param;
   }
 
-  async addMetric(workspaceId: string, runId: string, payload: CreateRunMetricDto) {
-    await this.findOne(workspaceId, runId);
+  async addMetric(workspaceId: string, runId: string, payload: CreateRunMetricDto, userId: string) {
+    await this.workspaceAccess.requireMembership(workspaceId, userId, [
+      WorkspaceRole.owner,
+      WorkspaceRole.maintainer,
+      WorkspaceRole.researcher,
+    ]);
+    await this.findOne(workspaceId, runId, userId);
 
     const metric = await this.prisma.runMetric.create({
       data: {
