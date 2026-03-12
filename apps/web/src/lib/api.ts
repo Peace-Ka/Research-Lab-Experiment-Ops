@@ -217,3 +217,39 @@ export async function createRun(
 export async function fetchRunDetail(workspaceId: string, runId: string, userId: string, apiBase?: string) {
   return request<RunDetail>(`/workspaces/${workspaceId}/runs/${runId}`, undefined, userId, apiBase);
 }
+
+export async function addRunParam(
+  workspaceId: string,
+  runId: string,
+  payload: { key: string; value: string },
+  userId: string,
+  apiBase?: string,
+) {
+  return request<RunParamRecord>(
+    `/workspaces/${workspaceId}/runs/${runId}/params`,
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    },
+    userId,
+    apiBase,
+  );
+}
+
+export async function addRunMetric(
+  workspaceId: string,
+  runId: string,
+  payload: { key: string; value: number; step?: number },
+  userId: string,
+  apiBase?: string,
+) {
+  return request<RunMetricRecord>(
+    `/workspaces/${workspaceId}/runs/${runId}/metrics`,
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    },
+    userId,
+    apiBase,
+  );
+}

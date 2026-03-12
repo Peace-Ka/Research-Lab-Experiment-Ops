@@ -24,3 +24,4 @@
 - Added live project/experiment/run creation flows to the frontend and exposed run detail with parameters and metrics.
 - Reworked frontend selection so experiments are scoped to a selected project and runs are scoped to a selected experiment.
 - Fixed frontend selection loading so the UI no longer refetches continuously when project/experiment scope is active.
+- Added explicit run selection plus live param and metric entry from the run detail panel.

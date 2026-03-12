@@ -28,3 +28,4 @@
 - Added run detail retrieval with parameter and metric display so runs can be inspected beyond status-only summaries.
 - Refactored the frontend to persist selected project and selected experiment so the UI now respects the workspace > project > experiment > run hierarchy.
 - Fixed a frontend refetch/render loop by stabilizing the selection dependencies in the main data hook.
+- Added explicit run selection and wired parameter/metric creation forms to the selected run detail panel.

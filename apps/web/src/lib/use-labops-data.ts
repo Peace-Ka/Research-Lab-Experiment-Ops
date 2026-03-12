@@ -17,8 +17,10 @@ import {
 type UseLabOpsDataOptions = {
   selectedProjectId?: string;
   selectedExperimentId?: string;
+  selectedRunId?: string;
   onProjectResolved?: (projectId: string) => void;
   onExperimentResolved?: (experimentId: string) => void;
+  onRunResolved?: (runId: string) => void;
 };
 
 export function useLabOpsData(userId: string, apiBase: string, options: UseLabOpsDataOptions = {}) {
@@ -32,8 +34,10 @@ export function useLabOpsData(userId: string, apiBase: string, options: UseLabOp
 
   const selectedProjectId = options.selectedProjectId ?? '';
   const selectedExperimentId = options.selectedExperimentId ?? '';
+  const selectedRunId = options.selectedRunId ?? '';
   const onProjectResolved = options.onProjectResolved;
   const onExperimentResolved = options.onExperimentResolved;
+  const onRunResolved = options.onRunResolved;
 
   const refresh = useCallback(async () => {
     if (!userId) {
@@ -99,13 +103,17 @@ export function useLabOpsData(userId: string, apiBase: string, options: UseLabOp
       const runResult = await fetchRuns(firstWorkspace.id, scopedExperiment.id, userId, apiBase);
       setRuns(runResult.items);
 
-      const firstRun = runResult.items[0];
-      if (!firstRun) {
+      const scopedRun = runResult.items.find((run) => run.id === selectedRunId) ?? runResult.items[0];
+      if (scopedRun?.id && scopedRun.id !== selectedRunId) {
+        onRunResolved?.(scopedRun.id);
+      }
+
+      if (!scopedRun) {
         setRunDetail(null);
         return;
       }
 
-      const detail = await fetchRunDetail(firstWorkspace.id, firstRun.id, userId, apiBase);
+      const detail = await fetchRunDetail(firstWorkspace.id, scopedRun.id, userId, apiBase);
       setRunDetail(detail);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : 'Unknown API error');
@@ -116,8 +124,10 @@ export function useLabOpsData(userId: string, apiBase: string, options: UseLabOp
     apiBase,
     onExperimentResolved,
     onProjectResolved,
+    onRunResolved,
     selectedExperimentId,
     selectedProjectId,
+    selectedRunId,
     userId,
   ]);
 

@@ -1,17 +1,19 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 const USER_ID_KEY = 'labops.userId';
 const API_BASE_KEY = 'labops.apiBase';
 const PROJECT_ID_KEY = 'labops.projectId';
 const EXPERIMENT_ID_KEY = 'labops.experimentId';
+const RUN_ID_KEY = 'labops.runId';
 
 export function useLabOpsSession() {
   const [userId, setUserIdState] = useState('');
   const [apiBase, setApiBaseState] = useState(process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3001/v1');
   const [selectedProjectId, setSelectedProjectIdState] = useState('');
   const [selectedExperimentId, setSelectedExperimentIdState] = useState('');
+  const [selectedRunId, setSelectedRunIdState] = useState('');
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -19,6 +21,7 @@ export function useLabOpsSession() {
     const storedApiBase = window.localStorage.getItem(API_BASE_KEY);
     const storedProjectId = window.localStorage.getItem(PROJECT_ID_KEY);
     const storedExperimentId = window.localStorage.getItem(EXPERIMENT_ID_KEY);
+    const storedRunId = window.localStorage.getItem(RUN_ID_KEY);
 
     if (storedUserId) {
       setUserIdState(storedUserId);
@@ -36,28 +39,37 @@ export function useLabOpsSession() {
       setSelectedExperimentIdState(storedExperimentId);
     }
 
+    if (storedRunId) {
+      setSelectedRunIdState(storedRunId);
+    }
+
     setReady(true);
   }, []);
 
-  const setUserId = (nextUserId: string) => {
+  const setUserId = useCallback((nextUserId: string) => {
     setUserIdState(nextUserId);
     window.localStorage.setItem(USER_ID_KEY, nextUserId);
-  };
+  }, []);
 
-  const setApiBase = (nextApiBase: string) => {
+  const setApiBase = useCallback((nextApiBase: string) => {
     setApiBaseState(nextApiBase);
     window.localStorage.setItem(API_BASE_KEY, nextApiBase);
-  };
+  }, []);
 
-  const setSelectedProjectId = (projectId: string) => {
+  const setSelectedProjectId = useCallback((projectId: string) => {
     setSelectedProjectIdState(projectId);
     window.localStorage.setItem(PROJECT_ID_KEY, projectId);
-  };
+  }, []);
 
-  const setSelectedExperimentId = (experimentId: string) => {
+  const setSelectedExperimentId = useCallback((experimentId: string) => {
     setSelectedExperimentIdState(experimentId);
     window.localStorage.setItem(EXPERIMENT_ID_KEY, experimentId);
-  };
+  }, []);
+
+  const setSelectedRunId = useCallback((runId: string) => {
+    setSelectedRunIdState(runId);
+    window.localStorage.setItem(RUN_ID_KEY, runId);
+  }, []);
 
   return {
     ready,
@@ -69,5 +81,7 @@ export function useLabOpsSession() {
     setSelectedProjectId,
     selectedExperimentId,
     setSelectedExperimentId,
+    selectedRunId,
+    setSelectedRunId,
   };
 }
