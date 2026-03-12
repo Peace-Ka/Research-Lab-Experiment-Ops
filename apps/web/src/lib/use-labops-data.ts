@@ -30,6 +30,11 @@ export function useLabOpsData(userId: string, apiBase: string, options: UseLabOp
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const selectedProjectId = options.selectedProjectId ?? '';
+  const selectedExperimentId = options.selectedExperimentId ?? '';
+  const onProjectResolved = options.onProjectResolved;
+  const onExperimentResolved = options.onExperimentResolved;
+
   const refresh = useCallback(async () => {
     if (!userId) {
       setWorkspaces([]);
@@ -61,10 +66,10 @@ export function useLabOpsData(userId: string, apiBase: string, options: UseLabOp
       setProjects(projectResult.items);
 
       const scopedProject =
-        projectResult.items.find((project) => project.id === options.selectedProjectId) ?? projectResult.items[0];
+        projectResult.items.find((project) => project.id === selectedProjectId) ?? projectResult.items[0];
 
-      if (scopedProject?.id && scopedProject.id !== options.selectedProjectId) {
-        options.onProjectResolved?.(scopedProject.id);
+      if (scopedProject?.id && scopedProject.id !== selectedProjectId) {
+        onProjectResolved?.(scopedProject.id);
       }
 
       if (!scopedProject) {
@@ -78,11 +83,11 @@ export function useLabOpsData(userId: string, apiBase: string, options: UseLabOp
       setExperiments(experimentResult.items);
 
       const scopedExperiment =
-        experimentResult.items.find((experiment) => experiment.id === options.selectedExperimentId) ??
+        experimentResult.items.find((experiment) => experiment.id === selectedExperimentId) ??
         experimentResult.items[0];
 
-      if (scopedExperiment?.id && scopedExperiment.id !== options.selectedExperimentId) {
-        options.onExperimentResolved?.(scopedExperiment.id);
+      if (scopedExperiment?.id && scopedExperiment.id !== selectedExperimentId) {
+        onExperimentResolved?.(scopedExperiment.id);
       }
 
       if (!scopedExperiment) {
@@ -109,7 +114,10 @@ export function useLabOpsData(userId: string, apiBase: string, options: UseLabOp
     }
   }, [
     apiBase,
-    options,
+    onExperimentResolved,
+    onProjectResolved,
+    selectedExperimentId,
+    selectedProjectId,
     userId,
   ]);
 

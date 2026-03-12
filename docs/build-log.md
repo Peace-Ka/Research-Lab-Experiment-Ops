@@ -117,3 +117,10 @@ pm run web:build`n- Result: The frontend now supports core create-and-inspect wo
   - 
 pm run web:build`n- Result: The UI now matches the backend hierarchy: project selection drives experiment scope, and experiment selection drives run scope.
 - Follow-up: Add explicit run selection, artifact upload, and reproducibility checklist interactions.
+
+## 2026-03-12 10:00 CST
+- Summary: Fixed frontend render jitter by stabilizing selection-based hook dependencies.
+- Files changed: pps/web/src/lib/use-labops-data.ts, docs/work-log.md, docs/build-log.md, CHANGELOG.md`n- Commands run:
+  - 
+pm run web:build`n- Result: The client-side data hook no longer re-executes because of a freshly created options object on every render, eliminating the visible jitter/refetch loop.
+- Follow-up: Add explicit run selection so the detail pane is no longer tied to the first run in the list.

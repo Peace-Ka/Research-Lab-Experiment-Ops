@@ -27,3 +27,4 @@
 - Added project, experiment, and run creation forms in the web app and wired them to live backend POST endpoints.
 - Added run detail retrieval with parameter and metric display so runs can be inspected beyond status-only summaries.
 - Refactored the frontend to persist selected project and selected experiment so the UI now respects the workspace > project > experiment > run hierarchy.
+- Fixed a frontend refetch/render loop by stabilizing the selection dependencies in the main data hook.
