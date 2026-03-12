@@ -8,7 +8,4 @@ export class CreateExperimentDto {
   @IsOptional()
   @IsString()
   hypothesis?: string;
-
-  @IsString()
-  createdById!: string;
 }

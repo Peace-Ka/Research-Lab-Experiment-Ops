@@ -21,18 +21,22 @@ describe('RunsService', () => {
     },
   };
   const audit = { log: jest.fn() };
-  const service = new RunsService(prisma as any, audit as any);
+  const workspaceAccess = {
+    requireMembership: jest.fn(),
+  };
+  const service = new RunsService(prisma as any, audit as any, workspaceAccess as any);
 
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
   it('creates the next run number for an experiment', async () => {
+    workspaceAccess.requireMembership.mockResolvedValue({ role: 'researcher' });
     prisma.experiment.findFirstOrThrow.mockResolvedValue({ id: 'exp_1' });
     prisma.experimentRun.findFirst.mockResolvedValue({ runNumber: 2 });
     prisma.experimentRun.create.mockResolvedValue({ id: 'run_3', runNumber: 3, workspaceId: 'ws_1', experimentId: 'exp_1' });
 
-    const result = await service.create('ws_1', 'exp_1', { createdById: 'user_1' });
+    const result = await service.create('ws_1', 'exp_1', {}, 'user_1');
 
     expect(prisma.experimentRun.create).toHaveBeenCalledWith({
       data: {
@@ -56,15 +60,17 @@ describe('RunsService', () => {
   });
 
   it('throws when the run is missing', async () => {
+    workspaceAccess.requireMembership.mockResolvedValue({ role: 'researcher' });
     prisma.experimentRun.findFirst.mockResolvedValue(null);
-    await expect(service.findOne('ws_1', 'missing')).rejects.toBeInstanceOf(NotFoundException);
+    await expect(service.findOne('ws_1', 'missing', 'user_1')).rejects.toBeInstanceOf(NotFoundException);
   });
 
   it('upserts a run parameter', async () => {
+    workspaceAccess.requireMembership.mockResolvedValue({ role: 'researcher' });
     prisma.experimentRun.findFirst.mockResolvedValue({ id: 'run_1', workspaceId: 'ws_1' });
     prisma.runParam.upsert.mockResolvedValue({ runId: 'run_1', key: 'lr', value: '0.001' });
 
-    const result = await service.upsertParam('ws_1', 'run_1', { key: 'lr', value: '0.001' });
+    const result = await service.upsertParam('ws_1', 'run_1', { key: 'lr', value: '0.001' }, 'user_1');
 
     expect(prisma.runParam.upsert).toHaveBeenCalledWith({
       where: { runId_key: { runId: 'run_1', key: 'lr' } },
@@ -76,10 +82,11 @@ describe('RunsService', () => {
   });
 
   it('creates a run metric', async () => {
+    workspaceAccess.requireMembership.mockResolvedValue({ role: 'researcher' });
     prisma.experimentRun.findFirst.mockResolvedValue({ id: 'run_1', workspaceId: 'ws_1' });
     prisma.runMetric.create.mockResolvedValue({ id: 'metric_1', runId: 'run_1', key: 'accuracy', value: 0.93 });
 
-    const result = await service.addMetric('ws_1', 'run_1', { key: 'accuracy', value: 0.93, step: 10 });
+    const result = await service.addMetric('ws_1', 'run_1', { key: 'accuracy', value: 0.93, step: 10 }, 'user_1');
 
     expect(prisma.runMetric.create).toHaveBeenCalledWith({
       data: { runId: 'run_1', key: 'accuracy', value: 0.93, step: 10 },

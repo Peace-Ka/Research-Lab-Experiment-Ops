@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
+import { CurrentUserId } from '../../common/auth/current-user-id.decorator';
 import { CreateRunMetricDto } from './dto/create-run-metric.dto';
 import { CreateRunParamDto } from './dto/create-run-param.dto';
 import { CreateRunDto } from './dto/create-run.dto';
@@ -10,13 +11,21 @@ export class RunsController {
   constructor(private readonly runsService: RunsService) {}
 
   @Get('workspaces/:workspaceId/experiments/:experimentId/runs')
-  findAll(@Param('workspaceId') workspaceId: string, @Param('experimentId') experimentId: string) {
-    return this.runsService.findAll(workspaceId, experimentId);
+  findAll(
+    @Param('workspaceId') workspaceId: string,
+    @Param('experimentId') experimentId: string,
+    @CurrentUserId() userId: string,
+  ) {
+    return this.runsService.findAll(workspaceId, experimentId, userId);
   }
 
   @Get('workspaces/:workspaceId/runs/:runId')
-  findOne(@Param('workspaceId') workspaceId: string, @Param('runId') runId: string) {
-    return this.runsService.findOne(workspaceId, runId);
+  findOne(
+    @Param('workspaceId') workspaceId: string,
+    @Param('runId') runId: string,
+    @CurrentUserId() userId: string,
+  ) {
+    return this.runsService.findOne(workspaceId, runId, userId);
   }
 
   @Post('workspaces/:workspaceId/experiments/:experimentId/runs')
@@ -24,8 +33,9 @@ export class RunsController {
     @Param('workspaceId') workspaceId: string,
     @Param('experimentId') experimentId: string,
     @Body() payload: CreateRunDto,
+    @CurrentUserId() userId: string,
   ) {
-    return this.runsService.create(workspaceId, experimentId, payload);
+    return this.runsService.create(workspaceId, experimentId, payload, userId);
   }
 
   @Patch('workspaces/:workspaceId/runs/:runId/status')
@@ -33,8 +43,9 @@ export class RunsController {
     @Param('workspaceId') workspaceId: string,
     @Param('runId') runId: string,
     @Body() payload: UpdateRunStatusDto,
+    @CurrentUserId() userId: string,
   ) {
-    return this.runsService.updateStatus(workspaceId, runId, payload);
+    return this.runsService.updateStatus(workspaceId, runId, payload, userId);
   }
 
   @Post('workspaces/:workspaceId/runs/:runId/params')
@@ -42,8 +53,9 @@ export class RunsController {
     @Param('workspaceId') workspaceId: string,
     @Param('runId') runId: string,
     @Body() payload: CreateRunParamDto,
+    @CurrentUserId() userId: string,
   ) {
-    return this.runsService.upsertParam(workspaceId, runId, payload);
+    return this.runsService.upsertParam(workspaceId, runId, payload, userId);
   }
 
   @Post('workspaces/:workspaceId/runs/:runId/metrics')
@@ -51,7 +63,8 @@ export class RunsController {
     @Param('workspaceId') workspaceId: string,
     @Param('runId') runId: string,
     @Body() payload: CreateRunMetricDto,
+    @CurrentUserId() userId: string,
   ) {
-    return this.runsService.addMetric(workspaceId, runId, payload);
+    return this.runsService.addMetric(workspaceId, runId, payload, userId);
   }
 }

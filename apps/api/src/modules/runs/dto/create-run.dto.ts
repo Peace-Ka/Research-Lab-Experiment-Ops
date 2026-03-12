@@ -1,9 +1,6 @@
 import { IsInt, IsOptional, IsString, Min } from 'class-validator';
 
 export class CreateRunDto {
-  @IsString()
-  createdById!: string;
-
   @IsOptional()
   @IsString()
   codeRef?: string;

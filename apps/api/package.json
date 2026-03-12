@@ -4,8 +4,9 @@
   "private": true,
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "start": "node dist/main.js",
-    "start:dev": "nest start --watch",
+    "start": "node dist/apps/api/src/main.js",
+    "start:dev": "ts-node --project tsconfig.json -r tsconfig-paths/register src/main.ts",
+    "start:watch": "node --watch --require ts-node/register --require tsconfig-paths/register src/main.ts",
     "lint": "eslint \"src/**/*.ts\" \"test/**/*.ts\"",
     "test": "jest --config ./test/jest-unit.json --passWithNoTests --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json --runInBand",
@@ -44,4 +45,3 @@
     "typescript": "^5.8.2"
   }
 }
-

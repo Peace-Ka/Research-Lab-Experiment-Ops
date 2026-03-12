@@ -17,7 +17,9 @@
     "docker:down": "docker compose -f infra/docker/docker-compose.dev.yml down",
     "prisma:generate": "npm run prisma:generate --workspace @labops/api",
     "prisma:migrate": "npm run prisma:migrate --workspace @labops/api",
-    "prisma:seed": "npm run prisma:seed --workspace @labops/api"
+    "prisma:seed": "npm run prisma:seed --workspace @labops/api",
+    "web:dev": "npm run dev --workspace @labops/web",
+    "web:build": "npm run build --workspace @labops/web"
   },
   "engines": {
     "node": ">=22"

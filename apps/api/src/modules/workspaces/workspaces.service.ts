@@ -1,7 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, WorkspaceRole } from '@prisma/client';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { WorkspaceAccessService } from './workspace-access.service';
 import { CreateWorkspaceDto } from './dto/create-workspace.dto';
 import { UpdateWorkspaceDto } from './dto/update-workspace.dto';
 
@@ -10,12 +11,31 @@ export class WorkspacesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
+    private readonly workspaceAccess: WorkspaceAccessService,
   ) {}
 
-  async findAll() {
-    const items = await this.prisma.workspace.findMany({
+  async findAll(userId: string) {
+    await this.workspaceAccess.getUserOrThrow(userId);
+
+    const memberships = await this.prisma.workspaceMembership.findMany({
+      where: {
+        userId,
+        status: 'active',
+      },
+      include: {
+        workspace: true,
+      },
       orderBy: { createdAt: 'desc' },
     });
+
+    const items = memberships.map((membership) => ({
+      ...membership.workspace,
+      membership: {
+        role: membership.role,
+        status: membership.status,
+        createdAt: membership.createdAt,
+      },
+    }));
 
     return {
       items,
@@ -23,7 +43,9 @@ export class WorkspacesService {
     };
   }
 
-  async findOne(workspaceId: string) {
+  async findOne(workspaceId: string, userId: string) {
+    const membership = await this.workspaceAccess.requireMembership(workspaceId, userId);
+
     const workspace = await this.prisma.workspace.findUnique({
       where: { id: workspaceId },
     });
@@ -32,20 +54,42 @@ export class WorkspacesService {
       throw new NotFoundException(`Workspace ${workspaceId} not found`);
     }
 
-    return workspace;
+    return {
+      ...workspace,
+      membership: {
+        role: membership.role,
+        status: membership.status,
+        createdAt: membership.createdAt,
+      },
+    };
   }
 
-  async create(payload: CreateWorkspaceDto) {
-    const workspace = await this.prisma.workspace.create({
-      data: payload,
+  async create(payload: CreateWorkspaceDto, userId: string) {
+    await this.workspaceAccess.getUserOrThrow(userId);
+
+    const workspace = await this.prisma.$transaction(async (tx) => {
+      const createdWorkspace = await tx.workspace.create({
+        data: payload,
+      });
+
+      await tx.workspaceMembership.create({
+        data: {
+          workspaceId: createdWorkspace.id,
+          userId,
+          role: WorkspaceRole.owner,
+        },
+      });
+
+      return createdWorkspace;
     });
 
     this.auditService.log('workspace.create', 'workspace', workspace.id);
     return workspace;
   }
 
-  async update(workspaceId: string, payload: UpdateWorkspaceDto) {
-    await this.findOne(workspaceId);
+  async update(workspaceId: string, payload: UpdateWorkspaceDto, userId: string) {
+    await this.workspaceAccess.requireMembership(workspaceId, userId, [WorkspaceRole.owner, WorkspaceRole.maintainer]);
+    await this.findOne(workspaceId, userId);
 
     const workspace = await this.prisma.workspace.update({
       where: { id: workspaceId },
@@ -56,8 +100,9 @@ export class WorkspacesService {
     return workspace;
   }
 
-  async remove(workspaceId: string) {
-    await this.findOne(workspaceId);
+  async remove(workspaceId: string, userId: string) {
+    await this.workspaceAccess.requireMembership(workspaceId, userId, [WorkspaceRole.owner]);
+    await this.findOne(workspaceId, userId);
     await this.prisma.workspace.delete({ where: { id: workspaceId } });
     this.auditService.log('workspace.delete', 'workspace', workspaceId);
     return { deleted: true, id: workspaceId };

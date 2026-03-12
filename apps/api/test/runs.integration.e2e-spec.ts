@@ -53,9 +53,18 @@ describe('Run params and metrics integration', () => {
       },
     });
 
+    await prisma.workspaceMembership.create({
+      data: {
+        workspaceId: workspace.id,
+        userId: user.id,
+        role: 'researcher',
+      },
+    });
+
     const project = await prisma.project.create({
       data: {
         workspaceId: workspace.id,
+        ownerUserId: user.id,
         name: 'Graph Benchmark',
         description: 'Benchmarking graph experiments',
       },
@@ -80,14 +89,15 @@ describe('Run params and metrics integration', () => {
       },
     });
 
-    return { workspace, run };
+    return { user, workspace, run };
   }
 
   it('upserts a run param through the HTTP API and persists it', async () => {
-    const { workspace, run } = await seedRunGraph();
+    const { user, workspace, run } = await seedRunGraph();
 
     await request(app.getHttpServer())
       .post(`/v1/workspaces/${workspace.id}/runs/${run.id}/params`)
+      .set('x-user-id', user.id)
       .send({ key: 'learning_rate', value: '0.001' })
       .expect(201);
 
@@ -104,6 +114,7 @@ describe('Run params and metrics integration', () => {
 
     await request(app.getHttpServer())
       .post(`/v1/workspaces/${workspace.id}/runs/${run.id}/params`)
+      .set('x-user-id', user.id)
       .send({ key: 'learning_rate', value: '0.0005' })
       .expect(201);
 
@@ -120,10 +131,11 @@ describe('Run params and metrics integration', () => {
   });
 
   it('creates a run metric through the HTTP API and persists it', async () => {
-    const { workspace, run } = await seedRunGraph();
+    const { user, workspace, run } = await seedRunGraph();
 
     await request(app.getHttpServer())
       .post(`/v1/workspaces/${workspace.id}/runs/${run.id}/metrics`)
+      .set('x-user-id', user.id)
       .send({ key: 'accuracy', value: 0.91, step: 3 })
       .expect(201);
 
