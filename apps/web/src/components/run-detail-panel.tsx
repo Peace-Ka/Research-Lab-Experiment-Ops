@@ -20,6 +20,7 @@ type RunDetailPanelProps = {
 
 const RUN_STATUSES = ['queued', 'running', 'completed', 'failed', 'canceled'] as const;
 const CHECKLIST_STATUSES = ['pending', 'passed', 'failed', 'waived'] as const;
+const EMPTY_CHECKLIST: RunChecklistStateRecord[] = [];
 
 type ChecklistDraftMap = Record<string, string>;
 
@@ -34,6 +35,13 @@ export function RunDetailPanel({ workspaceId, userId, apiBase, runDetail, onRefr
   const [error, setError] = useState('');
   const [pending, setPending] = useState(false);
 
+  const checklistStates = runDetail?.checklistStates ?? EMPTY_CHECKLIST;
+  const checklistSignature = runDetail
+    ? `${runDetail.id}:${runDetail.status}:${checklistStates
+        .map((state) => `${state.id}:${state.status}:${state.note ?? ''}`)
+        .join('|')}`
+    : 'empty';
+
   useEffect(() => {
     if (!runDetail) {
       setSelectedStatus('queued');
@@ -42,24 +50,22 @@ export function RunDetailPanel({ workspaceId, userId, apiBase, runDetail, onRefr
     }
 
     setSelectedStatus(runDetail.status as (typeof RUN_STATUSES)[number]);
-    setChecklistNotes(
-      Object.fromEntries(runDetail.checklistStates.map((state) => [state.checklistItem.id, state.note ?? ''])),
-    );
-  }, [runDetail]);
+    setChecklistNotes(Object.fromEntries(checklistStates.map((state) => [state.checklistItem.id, state.note ?? ''])));
+  }, [checklistSignature, checklistStates, runDetail]);
 
   const checklistSummary = useMemo(() => {
     if (!runDetail) {
       return { passed: 0, total: 0, blocking: 0 };
     }
 
-    const total = runDetail.checklistStates.length;
-    const passed = runDetail.checklistStates.filter((state) => state.status === 'passed').length;
-    const blocking = runDetail.checklistStates.filter(
+    const total = checklistStates.length;
+    const passed = checklistStates.filter((state) => state.status === 'passed').length;
+    const blocking = checklistStates.filter(
       (state) => state.checklistItem.isRequired && state.status !== 'passed' && state.status !== 'waived',
     ).length;
 
     return { passed, total, blocking };
-  }, [runDetail]);
+  }, [checklistStates, runDetail]);
 
   async function handleStatusSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -322,10 +328,10 @@ export function RunDetailPanel({ workspaceId, userId, apiBase, runDetail, onRefr
           <div>
             <p className="eyebrow">Checklist</p>
             <div className="list">
-              {runDetail.checklistStates.length === 0 ? (
+              {checklistStates.length === 0 ? (
                 <div className="list-item"><span className="muted">No checklist items configured for this workspace.</span></div>
               ) : (
-                runDetail.checklistStates.map((state) => (
+                checklistStates.map((state) => (
                   <div key={state.id} className="list-item">
                     <strong>
                       {state.checklistItem.label}
