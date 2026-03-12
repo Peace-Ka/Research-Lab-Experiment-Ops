@@ -20,3 +20,4 @@
 - Removed client-controlled `createdById` from experiment and run creation payloads in favor of authenticated context.
 - Added a Next.js frontend with a live dashboard shell, onboarding/auth panel, projects view, and experiments view.
 - Added root web scripts and verified the frontend with a production build.
+- Enabled local frontend-to-API CORS and added deterministic demo seed data for portfolio walkthroughs.

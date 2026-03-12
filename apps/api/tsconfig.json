@@ -3,6 +3,7 @@
   "compilerOptions": {
     "baseUrl": "./",
     "incremental": true,
+    "outDir": "./dist",
     "types": ["node", "jest"]
   },
   "include": ["src/**/*.ts", "test/**/*.ts", "../../prisma/seed.ts"]

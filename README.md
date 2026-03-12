@@ -41,8 +41,14 @@ See `prisma/schema.prisma`.
 4. Start local services with `docker compose -f infra/docker/docker-compose.dev.yml up -d`.
 5. Run `npm run prisma:generate`.
 6. Run `npm run build`, `npm run test`, and `npm run test:integration`.
-7. Start the API with `npm run dev`.
-8. Start the web app with `npm run web:dev`.
+7. Seed the local database with `npm run prisma:seed`.
+8. Start the API with `npm run dev`.
+9. Start the web app with `npm run web:dev`.
+
+## Demo Credentials
+- Email: `demo@labops.dev`
+- Password: `demo12345`
+- The seeded frontend walkthrough uses the registered user behind that login.
 
 ## Auth Flow
 - Register or log in from the frontend onboarding panel.

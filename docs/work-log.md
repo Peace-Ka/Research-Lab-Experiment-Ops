@@ -22,3 +22,5 @@
 - Replaced scaffold auth with persisted register/login and added lightweight request-user context via the x-user-id header.
 - Added workspace membership enforcement across workspace, project, experiment, and run services.
 - Scaffolded a Next.js frontend with a live dashboard shell, projects view, experiment view, and onboarding panel connected to the API.
+- Enabled CORS for the local web frontend and added deterministic demo seed data for one user, workspace, project, experiment, and runs.
+- Adjusted the API dev/start scripts to avoid the broken watch-mode startup path on Windows.

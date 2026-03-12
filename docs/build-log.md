@@ -92,3 +92,12 @@ Use this log for reproducible implementation history. Each entry should capture 
   - `npm run web:build`
 - Result: Register/login now persist real users, workspace-scoped endpoints enforce active membership through `x-user-id`, and the web app builds with live dashboard, projects, and experiments views.
 - Follow-up: Seed demo data for the frontend and replace the temporary `x-user-id` transport with JWT or session auth.
+
+## 2026-03-12 08:15 CST
+- Summary: Enabled local CORS, fixed API dev startup, and added deterministic demo seed data for the frontend walkthrough.
+- Files changed: pps/api/src/main.ts, pps/api/package.json, pps/api/tsconfig.json, pps/api/tsconfig.build.json, prisma/seed.ts, docs/work-log.md, docs/build-log.md, CHANGELOG.md`n- Commands run:
+  - 
+pm run build`n  - 
+pm run test`n  - 
+pm run prisma:seed`n- Result: Local frontend requests can reach the API, the API starts without the broken watch-mode path assumption, and the database contains a known demo user/workspace/project/experiment/run graph.
+- Follow-up: Replace the temporary x-user-id transport with JWT/session auth and add richer seeded metrics/artifacts.
