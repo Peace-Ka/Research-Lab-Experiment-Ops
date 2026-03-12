@@ -7,14 +7,28 @@ import { useLabOpsData } from '../../lib/use-labops-data';
 import { useLabOpsSession } from '../../lib/use-labops-session';
 
 export default function ProjectsPage() {
-  const { userId, setUserId, apiBase, setApiBase } = useLabOpsSession();
-  const { workspaces, projects, loading, error, refresh } = useLabOpsData(userId, apiBase);
+  const {
+    userId,
+    setUserId,
+    apiBase,
+    setApiBase,
+    selectedProjectId,
+    setSelectedProjectId,
+    selectedExperimentId,
+    setSelectedExperimentId,
+  } = useLabOpsSession();
+  const { workspaces, projects, loading, error, refresh } = useLabOpsData(userId, apiBase, {
+    selectedProjectId,
+    selectedExperimentId,
+    onProjectResolved: setSelectedProjectId,
+    onExperimentResolved: setSelectedExperimentId,
+  });
   const workspace = workspaces[0];
 
   return (
     <AppShell
       title="Projects"
-      subtitle="A direct view of the first reachable workspace and every project currently visible to the active user."
+      subtitle="Select a project first. Everything on the experiments page will scope to that selection."
       userId={userId}
       setUserId={setUserId}
       apiBase={apiBase}
@@ -52,7 +66,7 @@ export default function ProjectsPage() {
                 throw new Error('A workspace and active user are required before creating a project.');
               }
 
-              await createProject(
+              const createdProject = await createProject(
                 workspace.id,
                 {
                   name: values.name,
@@ -61,6 +75,8 @@ export default function ProjectsPage() {
                 userId,
                 apiBase,
               );
+              setSelectedProjectId(createdProject.id);
+              setSelectedExperimentId('');
               await refresh();
             }}
           />
@@ -83,11 +99,19 @@ export default function ProjectsPage() {
               </div>
             ) : (
               projects.map((project) => (
-                <div key={project.id} className="list-item">
+                <button
+                  key={project.id}
+                  type="button"
+                  className={selectedProjectId === project.id ? 'list-item selectable-item active-item' : 'list-item selectable-item'}
+                  onClick={() => {
+                    setSelectedProjectId(project.id);
+                    setSelectedExperimentId('');
+                  }}
+                >
                   <strong>{project.name}</strong>
                   <span className="muted">{project.description ?? 'No project description yet.'}</span>
                   <div className="inline-stat"><span>Owner</span><span>{project.ownerUserId ?? 'unassigned'}</span></div>
-                </div>
+                </button>
               ))
             )}
           </div>

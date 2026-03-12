@@ -14,7 +14,14 @@ import {
   fetchWorkspaces,
 } from './api';
 
-export function useLabOpsData(userId: string, apiBase: string) {
+type UseLabOpsDataOptions = {
+  selectedProjectId?: string;
+  selectedExperimentId?: string;
+  onProjectResolved?: (projectId: string) => void;
+  onExperimentResolved?: (experimentId: string) => void;
+};
+
+export function useLabOpsData(userId: string, apiBase: string, options: UseLabOpsDataOptions = {}) {
   const [workspaces, setWorkspaces] = useState<WorkspaceSummary[]>([]);
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [experiments, setExperiments] = useState<ExperimentSummary[]>([]);
@@ -53,25 +60,38 @@ export function useLabOpsData(userId: string, apiBase: string) {
       const projectResult = await fetchProjects(firstWorkspace.id, userId, apiBase);
       setProjects(projectResult.items);
 
-      const firstProject = projectResult.items[0];
-      if (!firstProject) {
+      const scopedProject =
+        projectResult.items.find((project) => project.id === options.selectedProjectId) ?? projectResult.items[0];
+
+      if (scopedProject?.id && scopedProject.id !== options.selectedProjectId) {
+        options.onProjectResolved?.(scopedProject.id);
+      }
+
+      if (!scopedProject) {
         setExperiments([]);
         setRuns([]);
         setRunDetail(null);
         return;
       }
 
-      const experimentResult = await fetchExperiments(firstWorkspace.id, firstProject.id, userId, apiBase);
+      const experimentResult = await fetchExperiments(firstWorkspace.id, scopedProject.id, userId, apiBase);
       setExperiments(experimentResult.items);
 
-      const firstExperiment = experimentResult.items[0];
-      if (!firstExperiment) {
+      const scopedExperiment =
+        experimentResult.items.find((experiment) => experiment.id === options.selectedExperimentId) ??
+        experimentResult.items[0];
+
+      if (scopedExperiment?.id && scopedExperiment.id !== options.selectedExperimentId) {
+        options.onExperimentResolved?.(scopedExperiment.id);
+      }
+
+      if (!scopedExperiment) {
         setRuns([]);
         setRunDetail(null);
         return;
       }
 
-      const runResult = await fetchRuns(firstWorkspace.id, firstExperiment.id, userId, apiBase);
+      const runResult = await fetchRuns(firstWorkspace.id, scopedExperiment.id, userId, apiBase);
       setRuns(runResult.items);
 
       const firstRun = runResult.items[0];
@@ -87,7 +107,11 @@ export function useLabOpsData(userId: string, apiBase: string) {
     } finally {
       setLoading(false);
     }
-  }, [apiBase, userId]);
+  }, [
+    apiBase,
+    options,
+    userId,
+  ]);
 
   useEffect(() => {
     void refresh();

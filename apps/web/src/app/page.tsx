@@ -7,16 +7,33 @@ import { useLabOpsData } from '../lib/use-labops-data';
 import { useLabOpsSession } from '../lib/use-labops-session';
 
 export default function HomePage() {
-  const { ready, userId, setUserId, apiBase, setApiBase } = useLabOpsSession();
-  const { workspaces, projects, experiments, runs, runDetail, loading, error } = useLabOpsData(userId, apiBase);
+  const {
+    ready,
+    userId,
+    setUserId,
+    apiBase,
+    setApiBase,
+    selectedProjectId,
+    setSelectedProjectId,
+    selectedExperimentId,
+    setSelectedExperimentId,
+  } = useLabOpsSession();
+  const { workspaces, projects, experiments, runs, runDetail, loading, error } = useLabOpsData(userId, apiBase, {
+    selectedProjectId,
+    selectedExperimentId,
+    onProjectResolved: setSelectedProjectId,
+    onExperimentResolved: setSelectedExperimentId,
+  });
 
+  const selectedProject = projects.find((project) => project.id === selectedProjectId) ?? projects[0];
+  const selectedExperiment = experiments.find((experiment) => experiment.id === selectedExperimentId) ?? experiments[0];
   const completedRuns = runs.filter((run) => run.status === 'completed').length;
   const failedRuns = runs.filter((run) => run.status === 'failed').length;
 
   return (
     <AppShell
       title="Lab command center"
-      subtitle="A live view across your first workspace, its leading project, and the most recent experiment history."
+      subtitle="A live view across the selected workspace, project, experiment, and its recent run history."
       userId={userId}
       setUserId={setUserId}
       apiBase={apiBase}
@@ -32,17 +49,17 @@ export default function HomePage() {
           <div className="metric-card">
             <span className="kicker">Projects</span>
             <strong>{projects.length}</strong>
-            <span className="muted">Projects in the first reachable workspace.</span>
+            <span className="muted">Projects inside the current workspace.</span>
           </div>
           <div className="metric-card">
             <span className="kicker">Experiments</span>
             <strong>{experiments.length}</strong>
-            <span className="muted">Experiments attached to the lead project.</span>
+            <span className="muted">Experiments under the selected project.</span>
           </div>
           <div className="metric-card">
             <span className="kicker">Runs</span>
             <strong>{runs.length}</strong>
-            <span className="muted">Recent execution history for the lead experiment.</span>
+            <span className="muted">Runs under the selected experiment.</span>
           </div>
         </div>
 
@@ -59,11 +76,11 @@ export default function HomePage() {
             <div className="list">
               <div className="list-item">
                 <strong>{ready ? 'Frontend session ready' : 'Initializing local session'}</strong>
-                <span className="muted">The shell stores x-user-id and API base in local storage so you can work against the live backend without retyping them every refresh.</span>
+                <span className="muted">The shell stores x-user-id, API base, selected project, and selected experiment in local storage.</span>
               </div>
               <div className="list-item">
                 <strong>{loading ? 'Refreshing live backend data' : 'Backend sync idle'}</strong>
-                <span className="muted">This page reads from workspace, project, experiment, run, and run-detail endpoints using the current user context.</span>
+                <span className="muted">The dashboard now follows the selected project and experiment context instead of using arbitrary first records.</span>
               </div>
               <div className="list-item">
                 <strong>Run health snapshot</strong>
@@ -86,16 +103,16 @@ export default function HomePage() {
           </section>
 
           <section className="panel">
-            <p className="eyebrow">Lead project</p>
-            <h3>{projects[0]?.name ?? 'No project yet'}</h3>
-            <p className="muted">{projects[0]?.description ?? 'Projects will appear once the current user belongs to a workspace with project records.'}</p>
+            <p className="eyebrow">Selected project</p>
+            <h3>{selectedProject?.name ?? 'No project selected'}</h3>
+            <p className="muted">{selectedProject?.description ?? 'Choose a project on the Projects page to scope experiments correctly.'}</p>
             <Link className="secondary-button" href="/projects">Manage projects</Link>
           </section>
 
           <section className="panel">
-            <p className="eyebrow">Lead run</p>
-            <h3>{runDetail ? `Run #${runDetail.runNumber}` : 'No run yet'}</h3>
-            <p className="muted">{runDetail?.notes ?? 'Go to Experiments to create a run and inspect its reproducibility details.'}</p>
+            <p className="eyebrow">Selected experiment</p>
+            <h3>{selectedExperiment?.title ?? 'No experiment selected'}</h3>
+            <p className="muted">{runDetail?.notes ?? selectedExperiment?.hypothesis ?? 'Go to Experiments to pick an experiment and inspect its runs.'}</p>
             <Link className="secondary-button" href="/experiments">Open experiment workflow</Link>
           </section>
         </div>

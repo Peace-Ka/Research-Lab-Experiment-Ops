@@ -110,3 +110,10 @@ pm run build`n  -
 pm run test`n  - 
 pm run web:build`n- Result: The frontend now supports core create-and-inspect workflow loops instead of read-only summaries, and run detail surfaces params and metrics pulled from the API.
 - Follow-up: Add artifact upload, metric charts, and reproducibility checklist interactions.
+
+## 2026-03-12 09:35 CST
+- Summary: Fixed frontend hierarchy by persisting selected project and experiment context across pages.
+- Files changed: pps/web/src/lib/use-labops-session.ts, pps/web/src/lib/use-labops-data.ts, pps/web/src/app/page.tsx, pps/web/src/app/projects/page.tsx, pps/web/src/app/experiments/page.tsx, pps/web/src/app/globals.css, docs/work-log.md, docs/build-log.md, CHANGELOG.md`n- Commands run:
+  - 
+pm run web:build`n- Result: The UI now matches the backend hierarchy: project selection drives experiment scope, and experiment selection drives run scope.
+- Follow-up: Add explicit run selection, artifact upload, and reproducibility checklist interactions.

@@ -324,3 +324,14 @@ input {
 .compact-two-column {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
+.selectable-item {
+  width: 100%;
+  text-align: left;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  cursor: pointer;
+}
+
+.active-item {
+  border-color: rgba(159, 227, 197, 0.35);
+  background: rgba(159, 227, 197, 0.08);
+}
