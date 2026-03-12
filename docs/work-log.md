@@ -29,3 +29,5 @@
 - Refactored the frontend to persist selected project and selected experiment so the UI now respects the workspace > project > experiment > run hierarchy.
 - Fixed a frontend refetch/render loop by stabilizing the selection dependencies in the main data hook.
 - Added explicit run selection and wired parameter/metric creation forms to the selected run detail panel.
+- Added seeded reproducibility checklist items/states so demo runs now show readiness rather than empty checklist scaffolding.
+- Added run status editing and checklist state editing in the run detail panel to support an actual run-governance workflow.

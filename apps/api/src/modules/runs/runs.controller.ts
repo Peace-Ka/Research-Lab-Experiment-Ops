@@ -3,6 +3,7 @@ import { CurrentUserId } from '../../common/auth/current-user-id.decorator';
 import { CreateRunMetricDto } from './dto/create-run-metric.dto';
 import { CreateRunParamDto } from './dto/create-run-param.dto';
 import { CreateRunDto } from './dto/create-run.dto';
+import { UpdateRunChecklistStateDto } from './dto/update-run-checklist-state.dto';
 import { UpdateRunStatusDto } from './dto/update-run-status.dto';
 import { RunsService } from './runs.service';
 
@@ -66,5 +67,16 @@ export class RunsController {
     @CurrentUserId() userId: string,
   ) {
     return this.runsService.addMetric(workspaceId, runId, payload, userId);
+  }
+
+  @Patch('workspaces/:workspaceId/runs/:runId/checklist/:checklistItemId')
+  updateChecklistState(
+    @Param('workspaceId') workspaceId: string,
+    @Param('runId') runId: string,
+    @Param('checklistItemId') checklistItemId: string,
+    @Body() payload: UpdateRunChecklistStateDto,
+    @CurrentUserId() userId: string,
+  ) {
+    return this.runsService.updateChecklistState(workspaceId, runId, checklistItemId, payload, userId);
   }
 }

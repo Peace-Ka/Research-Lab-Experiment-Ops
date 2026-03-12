@@ -1,5 +1,5 @@
 import { scryptSync } from 'crypto';
-import { PrismaClient, RunStatus, WorkspaceRole } from '@prisma/client';
+import { ChecklistStatus, PrismaClient, RunStatus, WorkspaceRole } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -10,6 +10,8 @@ function hashPassword(password: string): string {
 }
 
 async function seed(): Promise<void> {
+  await prisma.runChecklistState.deleteMany();
+  await prisma.reproChecklistItem.deleteMany();
   await prisma.runMetric.deleteMany();
   await prisma.runParam.deleteMany();
   await prisma.experimentRun.deleteMany();
@@ -62,6 +64,36 @@ async function seed(): Promise<void> {
     },
   });
 
+  const checklistItems = await prisma.reproChecklistItem.createManyAndReturn({
+    data: [
+      {
+        workspaceId: workspace.id,
+        code: 'seed-recorded',
+        label: 'Random seed recorded',
+        description: 'A deterministic random seed is attached to the run.',
+      },
+      {
+        workspaceId: workspace.id,
+        code: 'code-ref-recorded',
+        label: 'Code reference captured',
+        description: 'The exact commit or branch reference is recorded for replay.',
+      },
+      {
+        workspaceId: workspace.id,
+        code: 'metrics-logged',
+        label: 'Outcome metrics logged',
+        description: 'At least one meaningful evaluation metric is attached to the run.',
+      },
+      {
+        workspaceId: workspace.id,
+        code: 'notes-reviewed',
+        label: 'Notes reviewed',
+        description: 'The run carries enough notes for another researcher to understand context.',
+        isRequired: false,
+      },
+    ],
+  });
+
   const runOne = await prisma.experimentRun.create({
     data: {
       workspaceId: workspace.id,
@@ -103,6 +135,61 @@ async function seed(): Promise<void> {
       { runId: runOne.id, key: 'loss', value: 0.214, step: 12 },
       { runId: runTwo.id, key: 'accuracy', value: 0.671, step: 12 },
       { runId: runTwo.id, key: 'loss', value: 1.402, step: 12 },
+    ],
+  });
+
+  const checklistByCode = new Map(checklistItems.map((item) => [item.code, item.id]));
+
+  await prisma.runChecklistState.createMany({
+    data: [
+      {
+        runId: runOne.id,
+        checklistItemId: checklistByCode.get('seed-recorded')!,
+        status: ChecklistStatus.passed,
+        note: 'Seed 42 recorded in run metadata.',
+      },
+      {
+        runId: runOne.id,
+        checklistItemId: checklistByCode.get('code-ref-recorded')!,
+        status: ChecklistStatus.passed,
+        note: 'Pinned to main@a1b2c3d.',
+      },
+      {
+        runId: runOne.id,
+        checklistItemId: checklistByCode.get('metrics-logged')!,
+        status: ChecklistStatus.passed,
+        note: 'Accuracy and loss recorded at step 12.',
+      },
+      {
+        runId: runOne.id,
+        checklistItemId: checklistByCode.get('notes-reviewed')!,
+        status: ChecklistStatus.passed,
+        note: 'Baseline notes reviewed by demo owner.',
+      },
+      {
+        runId: runTwo.id,
+        checklistItemId: checklistByCode.get('seed-recorded')!,
+        status: ChecklistStatus.passed,
+        note: 'Seed 43 recorded in run metadata.',
+      },
+      {
+        runId: runTwo.id,
+        checklistItemId: checklistByCode.get('code-ref-recorded')!,
+        status: ChecklistStatus.passed,
+        note: 'Pinned to main@d4e5f6g.',
+      },
+      {
+        runId: runTwo.id,
+        checklistItemId: checklistByCode.get('metrics-logged')!,
+        status: ChecklistStatus.failed,
+        note: 'Failure metrics were logged, but final evaluation is incomplete.',
+      },
+      {
+        runId: runTwo.id,
+        checklistItemId: checklistByCode.get('notes-reviewed')!,
+        status: ChecklistStatus.pending,
+        note: 'Failure analysis still needs peer review.',
+      },
     ],
   });
 

@@ -6,6 +6,7 @@ import { WorkspaceAccessService } from '../workspaces/workspace-access.service';
 import { CreateRunMetricDto } from './dto/create-run-metric.dto';
 import { CreateRunParamDto } from './dto/create-run-param.dto';
 import { CreateRunDto } from './dto/create-run.dto';
+import { UpdateRunChecklistStateDto } from './dto/update-run-checklist-state.dto';
 import { UpdateRunStatusDto } from './dto/update-run-status.dto';
 
 @Injectable()
@@ -44,6 +45,16 @@ export class RunsService {
         metrics: {
           orderBy: [{ key: 'asc' }, { loggedAt: 'desc' }],
         },
+        checklistStates: {
+          include: {
+            checklistItem: true,
+          },
+          orderBy: {
+            checklistItem: {
+              code: 'asc',
+            },
+          },
+        },
       },
     });
 
@@ -68,6 +79,12 @@ export class RunsService {
       select: { runNumber: true },
     });
 
+    const checklistItems = await this.prisma.reproChecklistItem.findMany({
+      where: { workspaceId },
+      orderBy: { code: 'asc' },
+      select: { id: true },
+    });
+
     const run = await this.prisma.experimentRun.create({
       data: {
         workspaceId,
@@ -83,6 +100,13 @@ export class RunsService {
         modelId: payload.modelId,
         modelVersionId: payload.modelVersionId,
         notes: payload.notes,
+        checklistStates: checklistItems.length
+          ? {
+              create: checklistItems.map((item) => ({
+                checklistItemId: item.id,
+              })),
+            }
+          : undefined,
       },
     });
 
@@ -155,5 +179,46 @@ export class RunsService {
 
     this.auditService.log('run.metric_create', 'run_metric', metric.id);
     return metric;
+  }
+
+  async updateChecklistState(
+    workspaceId: string,
+    runId: string,
+    checklistItemId: string,
+    payload: UpdateRunChecklistStateDto,
+    userId: string,
+  ) {
+    await this.workspaceAccess.requireMembership(workspaceId, userId, [
+      WorkspaceRole.owner,
+      WorkspaceRole.maintainer,
+      WorkspaceRole.researcher,
+      WorkspaceRole.reviewer,
+    ]);
+    await this.findOne(workspaceId, runId, userId);
+
+    const checklistState = await this.prisma.runChecklistState.upsert({
+      where: {
+        runId_checklistItemId: {
+          runId,
+          checklistItemId,
+        },
+      },
+      update: {
+        status: payload.status,
+        note: payload.note,
+      },
+      create: {
+        runId,
+        checklistItemId,
+        status: payload.status,
+        note: payload.note,
+      },
+      include: {
+        checklistItem: true,
+      },
+    });
+
+    this.auditService.log('run.checklist_update', 'run_checklist_state', checklistState.id);
+    return checklistState;
   }
 }
