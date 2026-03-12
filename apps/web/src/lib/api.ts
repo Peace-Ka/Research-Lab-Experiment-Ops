@@ -51,6 +51,28 @@ export type RunSummary = {
   updatedAt: string;
 };
 
+export type RunParamRecord = {
+  id: string;
+  key: string;
+  value: string;
+};
+
+export type RunMetricRecord = {
+  id: string;
+  key: string;
+  value: number;
+  step?: number | null;
+  loggedAt: string;
+};
+
+export type RunDetail = RunSummary & {
+  codeRef?: string | null;
+  randomSeed?: number | null;
+  notes?: string | null;
+  params: RunParamRecord[];
+  metrics: RunMetricRecord[];
+};
+
 function resolveApiBase(apiBase?: string) {
   return apiBase ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3001/v1';
 }
@@ -117,10 +139,45 @@ export async function fetchProjects(workspaceId: string, userId: string, apiBase
   );
 }
 
+export async function createProject(
+  workspaceId: string,
+  payload: { name: string; description?: string },
+  userId: string,
+  apiBase?: string,
+) {
+  return request<ProjectSummary>(
+    `/workspaces/${workspaceId}/projects`,
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    },
+    userId,
+    apiBase,
+  );
+}
+
 export async function fetchExperiments(workspaceId: string, projectId: string, userId: string, apiBase?: string) {
   return request<{ workspaceId: string; projectId: string; items: ExperimentSummary[]; total: number }>(
     `/workspaces/${workspaceId}/projects/${projectId}/experiments`,
     undefined,
+    userId,
+    apiBase,
+  );
+}
+
+export async function createExperiment(
+  workspaceId: string,
+  projectId: string,
+  payload: { title: string; hypothesis?: string },
+  userId: string,
+  apiBase?: string,
+) {
+  return request<ExperimentSummary>(
+    `/workspaces/${workspaceId}/projects/${projectId}/experiments`,
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    },
     userId,
     apiBase,
   );
@@ -133,4 +190,30 @@ export async function fetchRuns(workspaceId: string, experimentId: string, userI
     userId,
     apiBase,
   );
+}
+
+export async function createRun(
+  workspaceId: string,
+  experimentId: string,
+  payload: {
+    codeRef?: string;
+    randomSeed?: number;
+    notes?: string;
+  },
+  userId: string,
+  apiBase?: string,
+) {
+  return request<RunSummary>(
+    `/workspaces/${workspaceId}/experiments/${experimentId}/runs`,
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    },
+    userId,
+    apiBase,
+  );
+}
+
+export async function fetchRunDetail(workspaceId: string, runId: string, userId: string, apiBase?: string) {
+  return request<RunDetail>(`/workspaces/${workspaceId}/runs/${runId}`, undefined, userId, apiBase);
 }

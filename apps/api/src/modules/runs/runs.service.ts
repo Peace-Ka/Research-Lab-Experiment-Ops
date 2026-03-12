@@ -37,6 +37,14 @@ export class RunsService {
 
     const run = await this.prisma.experimentRun.findFirst({
       where: { id: runId, workspaceId },
+      include: {
+        params: {
+          orderBy: { key: 'asc' },
+        },
+        metrics: {
+          orderBy: [{ key: 'asc' }, { loggedAt: 'desc' }],
+        },
+      },
     });
 
     if (!run) {

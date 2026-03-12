@@ -21,3 +21,4 @@
 - Added a Next.js frontend with a live dashboard shell, onboarding/auth panel, projects view, and experiments view.
 - Added root web scripts and verified the frontend with a production build.
 - Enabled local frontend-to-API CORS and added deterministic demo seed data for portfolio walkthroughs.
+- Added live project/experiment/run creation flows to the frontend and exposed run detail with parameters and metrics.

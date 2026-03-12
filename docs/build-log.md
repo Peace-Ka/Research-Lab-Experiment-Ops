@@ -101,3 +101,12 @@ pm run build`n  -
 pm run test`n  - 
 pm run prisma:seed`n- Result: Local frontend requests can reach the API, the API starts without the broken watch-mode path assumption, and the database contains a known demo user/workspace/project/experiment/run graph.
 - Follow-up: Replace the temporary x-user-id transport with JWT/session auth and add richer seeded metrics/artifacts.
+
+## 2026-03-12 09:05 CST
+- Summary: Added live create workflows for projects, experiments, and runs plus run detail display with parameters and metrics.
+- Files changed: pps/api/src/modules/runs/runs.service.ts, pps/web/src/lib/api.ts, pps/web/src/lib/use-labops-data.ts, pps/web/src/components/*, pps/web/src/app/*, pps/web/src/app/globals.css, docs/work-log.md, docs/build-log.md, CHANGELOG.md`n- Commands run:
+  - 
+pm run build`n  - 
+pm run test`n  - 
+pm run web:build`n- Result: The frontend now supports core create-and-inspect workflow loops instead of read-only summaries, and run detail surfaces params and metrics pulled from the API.
+- Follow-up: Add artifact upload, metric charts, and reproducibility checklist interactions.

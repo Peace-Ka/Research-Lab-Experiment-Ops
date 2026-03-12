@@ -24,3 +24,5 @@
 - Scaffolded a Next.js frontend with a live dashboard shell, projects view, experiment view, and onboarding panel connected to the API.
 - Enabled CORS for the local web frontend and added deterministic demo seed data for one user, workspace, project, experiment, and runs.
 - Adjusted the API dev/start scripts to avoid the broken watch-mode startup path on Windows.
+- Added project, experiment, and run creation forms in the web app and wired them to live backend POST endpoints.
+- Added run detail retrieval with parameter and metric display so runs can be inspected beyond status-only summaries.
