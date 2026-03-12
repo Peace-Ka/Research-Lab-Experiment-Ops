@@ -124,3 +124,20 @@ pm run web:build`n- Result: The UI now matches the backend hierarchy: project se
   - 
 pm run web:build`n- Result: The client-side data hook no longer re-executes because of a freshly created options object on every render, eliminating the visible jitter/refetch loop.
 - Follow-up: Add explicit run selection so the detail pane is no longer tied to the first run in the list.
+
+## 2026-03-12 10:35 CST
+- Summary: Added explicit run selection and live parameter/metric entry for the selected run.
+- Files changed: pps/web/src/lib/api.ts, pps/web/src/lib/use-labops-session.ts, pps/web/src/lib/use-labops-data.ts, pps/web/src/components/run-detail-panel.tsx, pps/web/src/app/experiments/page.tsx, pps/web/src/app/globals.css, docs/work-log.md, docs/build-log.md, CHANGELOG.md`n- Commands run:
+  - 
+pm run web:build`n- Result: The experiments page now lets the user choose a specific run and record its parameters and metrics directly from the UI.
+- Follow-up: Add run status editing, artifact upload, and reproducibility checklist interactions.
+
+## 2026-03-12 10:55 CST
+- Summary: Added seeded reproducibility checklist data plus run status and checklist editing in the web app.
+- Files changed: `prisma/seed.ts`, `apps/api/test/runs.service.spec.ts`, `apps/web/src/lib/api.ts`, `apps/web/src/components/run-detail-panel.tsx`
+- Commands run:
+  - `npm.cmd run test`
+  - `npm.cmd run prisma:seed`
+  - `npm.cmd run web:build`
+- Result: Demo runs now carry meaningful checklist state, the run detail panel can update lifecycle status and checklist items, unit tests pass, seed succeeds, and the frontend production build is clean.
+- Follow-up: Add artifact upload and metric visualizations so evidence and outcomes are not text-only.

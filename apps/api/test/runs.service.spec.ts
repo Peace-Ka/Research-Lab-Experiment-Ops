@@ -1,11 +1,14 @@
 import { NotFoundException } from '@nestjs/common';
-import { RunStatus } from '@prisma/client';
+import { ChecklistStatus, RunStatus } from '@prisma/client';
 import { RunsService } from '../src/modules/runs/runs.service';
 
 describe('RunsService', () => {
   const prisma = {
     experiment: {
       findFirstOrThrow: jest.fn(),
+    },
+    reproChecklistItem: {
+      findMany: jest.fn(),
     },
     experimentRun: {
       findMany: jest.fn(),
@@ -19,6 +22,9 @@ describe('RunsService', () => {
     runMetric: {
       create: jest.fn(),
     },
+    runChecklistState: {
+      upsert: jest.fn(),
+    },
   };
   const audit = { log: jest.fn() };
   const workspaceAccess = {
@@ -30,10 +36,11 @@ describe('RunsService', () => {
     jest.clearAllMocks();
   });
 
-  it('creates the next run number for an experiment', async () => {
+  it('creates the next run number for an experiment and initializes checklist state', async () => {
     workspaceAccess.requireMembership.mockResolvedValue({ role: 'researcher' });
     prisma.experiment.findFirstOrThrow.mockResolvedValue({ id: 'exp_1' });
     prisma.experimentRun.findFirst.mockResolvedValue({ runNumber: 2 });
+    prisma.reproChecklistItem.findMany.mockResolvedValue([{ id: 'check_1' }, { id: 'check_2' }]);
     prisma.experimentRun.create.mockResolvedValue({ id: 'run_3', runNumber: 3, workspaceId: 'ws_1', experimentId: 'exp_1' });
 
     const result = await service.create('ws_1', 'exp_1', {}, 'user_1');
@@ -53,6 +60,9 @@ describe('RunsService', () => {
         modelId: undefined,
         modelVersionId: undefined,
         notes: undefined,
+        checklistStates: {
+          create: [{ checklistItemId: 'check_1' }, { checklistItemId: 'check_2' }],
+        },
       },
     });
     expect(audit.log).toHaveBeenCalledWith('run.create', 'run', 'run_3');
@@ -93,5 +103,47 @@ describe('RunsService', () => {
     });
     expect(audit.log).toHaveBeenCalledWith('run.metric_create', 'run_metric', 'metric_1');
     expect(result.id).toBe('metric_1');
+  });
+
+  it('upserts a checklist state', async () => {
+    workspaceAccess.requireMembership.mockResolvedValue({ role: 'reviewer' });
+    prisma.experimentRun.findFirst.mockResolvedValue({ id: 'run_1', workspaceId: 'ws_1' });
+    prisma.runChecklistState.upsert.mockResolvedValue({
+      id: 'state_1',
+      status: ChecklistStatus.passed,
+      checklistItem: { id: 'check_1', code: 'seed-recorded' },
+    });
+
+    const result = await service.updateChecklistState(
+      'ws_1',
+      'run_1',
+      'check_1',
+      { status: ChecklistStatus.passed, note: 'Recorded in metadata.' },
+      'user_1',
+    );
+
+    expect(prisma.runChecklistState.upsert).toHaveBeenCalledWith({
+      where: {
+        runId_checklistItemId: {
+          runId: 'run_1',
+          checklistItemId: 'check_1',
+        },
+      },
+      update: {
+        status: ChecklistStatus.passed,
+        note: 'Recorded in metadata.',
+      },
+      create: {
+        runId: 'run_1',
+        checklistItemId: 'check_1',
+        status: ChecklistStatus.passed,
+        note: 'Recorded in metadata.',
+      },
+      include: {
+        checklistItem: true,
+      },
+    });
+    expect(audit.log).toHaveBeenCalledWith('run.checklist_update', 'run_checklist_state', 'state_1');
+    expect(result.id).toBe('state_1');
   });
 });

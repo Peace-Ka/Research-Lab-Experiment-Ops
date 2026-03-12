@@ -17,12 +17,16 @@ export default function ExperimentsPage() {
     setSelectedProjectId,
     selectedExperimentId,
     setSelectedExperimentId,
+    selectedRunId,
+    setSelectedRunId,
   } = useLabOpsSession();
   const { workspaces, projects, experiments, runs, runDetail, loading, error, refresh } = useLabOpsData(userId, apiBase, {
     selectedProjectId,
     selectedExperimentId,
+    selectedRunId,
     onProjectResolved: setSelectedProjectId,
     onExperimentResolved: setSelectedExperimentId,
+    onRunResolved: setSelectedRunId,
   });
   const workspace = workspaces[0];
   const project = projects.find((item) => item.id === selectedProjectId) ?? projects[0];
@@ -31,7 +35,7 @@ export default function ExperimentsPage() {
   return (
     <AppShell
       title="Experiments"
-      subtitle="Experiments are scoped to the currently selected project, and runs are scoped to the currently selected experiment."
+      subtitle="Experiments are scoped to the selected project, runs are scoped to the selected experiment, and run detail follows the selected run."
       userId={userId}
       setUserId={setUserId}
       apiBase={apiBase}
@@ -75,6 +79,7 @@ export default function ExperimentsPage() {
                 apiBase,
               );
               setSelectedExperimentId(createdExperiment.id);
+              setSelectedRunId('');
               await refresh();
             }}
           />
@@ -98,7 +103,7 @@ export default function ExperimentsPage() {
                 throw new Error('A workspace, selected experiment, and active user are required before creating a run.');
               }
 
-              await createRun(
+              const createdRun = await createRun(
                 workspace.id,
                 experiment.id,
                 {
@@ -109,6 +114,7 @@ export default function ExperimentsPage() {
                 userId,
                 apiBase,
               );
+              setSelectedRunId(createdRun.id);
               await refresh();
             }}
           />
@@ -136,7 +142,10 @@ export default function ExperimentsPage() {
                     key={item.id}
                     type="button"
                     className={selectedExperimentId === item.id ? 'list-item selectable-item active-item' : 'list-item selectable-item'}
-                    onClick={() => setSelectedExperimentId(item.id)}
+                    onClick={() => {
+                      setSelectedExperimentId(item.id);
+                      setSelectedRunId('');
+                    }}
                   >
                     <strong>{item.title}</strong>
                     <span className="muted">{item.hypothesis ?? 'No hypothesis recorded.'}</span>
@@ -163,18 +172,29 @@ export default function ExperimentsPage() {
                 </div>
               ) : (
                 runs.map((run) => (
-                  <div key={run.id} className="list-item">
+                  <button
+                    key={run.id}
+                    type="button"
+                    className={selectedRunId === run.id ? 'list-item selectable-item active-item' : 'list-item selectable-item'}
+                    onClick={() => setSelectedRunId(run.id)}
+                  >
                     <strong>Run #{run.runNumber}</strong>
                     <div className="inline-stat"><span>Status</span><span>{run.status}</span></div>
                     <div className="inline-stat"><span>Created by</span><span>{run.createdById}</span></div>
-                  </div>
+                  </button>
                 ))
               )}
             </div>
           </section>
         </div>
 
-        <RunDetailPanel runDetail={runDetail} />
+        <RunDetailPanel
+          workspaceId={workspace?.id}
+          userId={userId}
+          apiBase={apiBase}
+          runDetail={runDetail}
+          onRefresh={refresh}
+        />
       </div>
     </AppShell>
   );
