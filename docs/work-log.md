@@ -33,3 +33,5 @@
 - Added run status editing and checklist state editing in the run detail panel to support an actual run-governance workflow.
 - Added artifact registration to the run workflow so runs now carry evidence records with type, checksum, size, and storage key.
 - Seeded demo artifacts and surfaced them in the run detail panel alongside metrics, params, and checklist state.
+- Added a dedicated analytics panel on the experiments page with run-status distribution and selected-run metric trend charts.
+- Added an 8-week delivery roadmap to keep the remaining scope controlled through the next two months.

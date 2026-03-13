@@ -132,9 +132,17 @@ async function seed(): Promise<void> {
 
   await prisma.runMetric.createMany({
     data: [
+      { runId: runOne.id, key: 'accuracy', value: 0.821, step: 4 },
+      { runId: runOne.id, key: 'accuracy', value: 0.887, step: 8 },
       { runId: runOne.id, key: 'accuracy', value: 0.914, step: 12 },
+      { runId: runOne.id, key: 'loss', value: 0.641, step: 4 },
+      { runId: runOne.id, key: 'loss', value: 0.332, step: 8 },
       { runId: runOne.id, key: 'loss', value: 0.214, step: 12 },
+      { runId: runTwo.id, key: 'accuracy', value: 0.612, step: 4 },
+      { runId: runTwo.id, key: 'accuracy', value: 0.688, step: 8 },
       { runId: runTwo.id, key: 'accuracy', value: 0.671, step: 12 },
+      { runId: runTwo.id, key: 'loss', value: 1.204, step: 4 },
+      { runId: runTwo.id, key: 'loss', value: 1.118, step: 8 },
       { runId: runTwo.id, key: 'loss', value: 1.402, step: 12 },
     ],
   });
@@ -188,7 +196,7 @@ async function seed(): Promise<void> {
         runId: runOne.id,
         checklistItemId: checklistByCode.get('metrics-logged')!,
         status: ChecklistStatus.passed,
-        note: 'Accuracy and loss recorded at step 12.',
+        note: 'Accuracy and loss recorded across three checkpoints.',
       },
       {
         runId: runOne.id,
@@ -212,7 +220,7 @@ async function seed(): Promise<void> {
         runId: runTwo.id,
         checklistItemId: checklistByCode.get('metrics-logged')!,
         status: ChecklistStatus.failed,
-        note: 'Failure metrics were logged, but final evaluation is incomplete.',
+        note: 'Loss diverged by epoch 12 and final evaluation is incomplete.',
       },
       {
         runId: runTwo.id,
