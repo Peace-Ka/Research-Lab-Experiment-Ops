@@ -11,6 +11,9 @@ export default function HomePage() {
     ready,
     userId,
     setUserId,
+    accessToken,
+    setAccessToken,
+    clearAuth,
     apiBase,
     setApiBase,
     selectedProjectId,
@@ -18,7 +21,7 @@ export default function HomePage() {
     selectedExperimentId,
     setSelectedExperimentId,
   } = useLabOpsSession();
-  const { workspaces, projects, experiments, runs, runDetail, loading, error } = useLabOpsData(userId, apiBase, {
+  const { workspaces, projects, experiments, runs, runDetail, loading, error } = useLabOpsData(accessToken, apiBase, {
     selectedProjectId,
     selectedExperimentId,
     onProjectResolved: setSelectedProjectId,
@@ -35,7 +38,8 @@ export default function HomePage() {
       title="Lab command center"
       subtitle="A live view across the selected workspace, project, experiment, and its recent run history."
       userId={userId}
-      setUserId={setUserId}
+      accessToken={accessToken}
+      clearAuth={clearAuth}
       apiBase={apiBase}
       setApiBase={setApiBase}
     >
@@ -64,7 +68,13 @@ export default function HomePage() {
         </div>
 
         <div className="two-column">
-          <AuthPanel apiBase={apiBase} onAuthenticated={setUserId} />
+          <AuthPanel
+            apiBase={apiBase}
+            onAuthenticated={({ userId: nextUserId, accessToken: nextAccessToken }) => {
+              setUserId(nextUserId);
+              setAccessToken(nextAccessToken);
+            }}
+          />
 
           <section className="panel">
             <div className="panel-header">
@@ -76,7 +86,7 @@ export default function HomePage() {
             <div className="list">
               <div className="list-item">
                 <strong>{ready ? 'Frontend session ready' : 'Initializing local session'}</strong>
-                <span className="muted">The shell stores x-user-id, API base, selected project, and selected experiment in local storage.</span>
+                <span className="muted">The shell stores the bearer token, API base, selected project, and selected experiment in local storage.</span>
               </div>
               <div className="list-item">
                 <strong>{loading ? 'Refreshing live backend data' : 'Backend sync idle'}</strong>

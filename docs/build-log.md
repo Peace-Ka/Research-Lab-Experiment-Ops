@@ -172,3 +172,14 @@ pm run web:build`n- Result: The experiments page now lets the user choose a spec
 - Result: Artifacts are now uploaded through the API, persisted to local storage, downloadable from run detail, and represented in seeded demo data with actual files on disk.
 - Follow-up: Replace local storage with MinIO/S3-backed object storage and add preview support for images/logs.
 - Update: switched artifact downloads from plain anchor links to authenticated blob fetches because browser links cannot send the required `x-user-id` header.
+
+## 2026-03-13 07:05 CST
+- Summary: Replaced the temporary x-user-id shell transport with bearer-token authentication across the API and web client.
+- Files changed: `apps/api/src/common/auth/*`, `apps/api/src/modules/auth/*`, `apps/api/src/modules/health/health.controller.ts`, `apps/api/src/app.module.ts`, `apps/api/src/main.ts`, `apps/api/test/auth.service.spec.ts`, `apps/web/src/lib/*`, `apps/web/src/components/*`, `apps/web/src/app/*`, `.env.example`, `.gitignore`
+- Commands run:
+  - `npm.cmd run build`
+  - `npm.cmd run test`
+  - `npm.cmd run test:integration`
+  - `npm.cmd run web:build`
+- Result: Auth now issues and verifies signed bearer tokens, protected routes accept `Authorization: Bearer ...`, the frontend persists the access token in session storage, and all API/frontend validations pass.
+- Follow-up: Restart the API/web dev servers, sign in again to refresh local session state, then verify project/experiment/run flows under JWT auth.

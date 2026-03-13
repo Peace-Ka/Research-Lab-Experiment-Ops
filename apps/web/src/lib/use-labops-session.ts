@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 const USER_ID_KEY = 'labops.userId';
+const ACCESS_TOKEN_KEY = 'labops.accessToken';
 const API_BASE_KEY = 'labops.apiBase';
 const PROJECT_ID_KEY = 'labops.projectId';
 const EXPERIMENT_ID_KEY = 'labops.experimentId';
@@ -10,6 +11,7 @@ const RUN_ID_KEY = 'labops.runId';
 
 export function useLabOpsSession() {
   const [userId, setUserIdState] = useState('');
+  const [accessToken, setAccessTokenState] = useState('');
   const [apiBase, setApiBaseState] = useState(process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3001/v1');
   const [selectedProjectId, setSelectedProjectIdState] = useState('');
   const [selectedExperimentId, setSelectedExperimentIdState] = useState('');
@@ -18,6 +20,7 @@ export function useLabOpsSession() {
 
   useEffect(() => {
     const storedUserId = window.localStorage.getItem(USER_ID_KEY);
+    const storedAccessToken = window.localStorage.getItem(ACCESS_TOKEN_KEY);
     const storedApiBase = window.localStorage.getItem(API_BASE_KEY);
     const storedProjectId = window.localStorage.getItem(PROJECT_ID_KEY);
     const storedExperimentId = window.localStorage.getItem(EXPERIMENT_ID_KEY);
@@ -25,6 +28,10 @@ export function useLabOpsSession() {
 
     if (storedUserId) {
       setUserIdState(storedUserId);
+    }
+
+    if (storedAccessToken) {
+      setAccessTokenState(storedAccessToken);
     }
 
     if (storedApiBase) {
@@ -48,8 +55,26 @@ export function useLabOpsSession() {
 
   const setUserId = useCallback((nextUserId: string) => {
     setUserIdState(nextUserId);
-    window.localStorage.setItem(USER_ID_KEY, nextUserId);
+    if (nextUserId) {
+      window.localStorage.setItem(USER_ID_KEY, nextUserId);
+    } else {
+      window.localStorage.removeItem(USER_ID_KEY);
+    }
   }, []);
+
+  const setAccessToken = useCallback((nextAccessToken: string) => {
+    setAccessTokenState(nextAccessToken);
+    if (nextAccessToken) {
+      window.localStorage.setItem(ACCESS_TOKEN_KEY, nextAccessToken);
+    } else {
+      window.localStorage.removeItem(ACCESS_TOKEN_KEY);
+    }
+  }, []);
+
+  const clearAuth = useCallback(() => {
+    setUserId('');
+    setAccessToken('');
+  }, [setAccessToken, setUserId]);
 
   const setApiBase = useCallback((nextApiBase: string) => {
     setApiBaseState(nextApiBase);
@@ -58,23 +83,38 @@ export function useLabOpsSession() {
 
   const setSelectedProjectId = useCallback((projectId: string) => {
     setSelectedProjectIdState(projectId);
-    window.localStorage.setItem(PROJECT_ID_KEY, projectId);
+    if (projectId) {
+      window.localStorage.setItem(PROJECT_ID_KEY, projectId);
+    } else {
+      window.localStorage.removeItem(PROJECT_ID_KEY);
+    }
   }, []);
 
   const setSelectedExperimentId = useCallback((experimentId: string) => {
     setSelectedExperimentIdState(experimentId);
-    window.localStorage.setItem(EXPERIMENT_ID_KEY, experimentId);
+    if (experimentId) {
+      window.localStorage.setItem(EXPERIMENT_ID_KEY, experimentId);
+    } else {
+      window.localStorage.removeItem(EXPERIMENT_ID_KEY);
+    }
   }, []);
 
   const setSelectedRunId = useCallback((runId: string) => {
     setSelectedRunIdState(runId);
-    window.localStorage.setItem(RUN_ID_KEY, runId);
+    if (runId) {
+      window.localStorage.setItem(RUN_ID_KEY, runId);
+    } else {
+      window.localStorage.removeItem(RUN_ID_KEY);
+    }
   }, []);
 
   return {
     ready,
     userId,
     setUserId,
+    accessToken,
+    setAccessToken,
+    clearAuth,
     apiBase,
     setApiBase,
     selectedProjectId,

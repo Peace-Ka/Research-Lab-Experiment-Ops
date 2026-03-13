@@ -11,7 +11,8 @@ import { useLabOpsSession } from '../../lib/use-labops-session';
 export default function ExperimentsPage() {
   const {
     userId,
-    setUserId,
+    accessToken,
+    clearAuth,
     apiBase,
     setApiBase,
     selectedProjectId,
@@ -21,7 +22,7 @@ export default function ExperimentsPage() {
     selectedRunId,
     setSelectedRunId,
   } = useLabOpsSession();
-  const { workspaces, projects, experiments, runs, runDetail, loading, error, refresh } = useLabOpsData(userId, apiBase, {
+  const { workspaces, projects, experiments, runs, runDetail, loading, error, refresh } = useLabOpsData(accessToken, apiBase, {
     selectedProjectId,
     selectedExperimentId,
     selectedRunId,
@@ -38,7 +39,8 @@ export default function ExperimentsPage() {
       title="Experiments"
       subtitle="Experiments are scoped to the selected project, runs are scoped to the selected experiment, and run detail follows the selected run."
       userId={userId}
-      setUserId={setUserId}
+      accessToken={accessToken}
+      clearAuth={clearAuth}
       apiBase={apiBase}
       setApiBase={setApiBase}
     >
@@ -48,6 +50,7 @@ export default function ExperimentsPage() {
             <p className="eyebrow">Selected project</p>
             <h3>{project?.name ?? 'No project selected'}</h3>
             <p className="muted">{project?.description ?? 'Select a project from the Projects page first.'}</p>
+            {loading ? <p className="muted">Refreshing experiment scope...</p> : null}
             {error ? <p className="error-text">{error}</p> : null}
           </section>
 
@@ -65,8 +68,8 @@ export default function ExperimentsPage() {
             ]}
             submitLabel="Create experiment"
             onSubmit={async (values) => {
-              if (!workspace || !project || !userId) {
-                throw new Error('A workspace, selected project, and active user are required before creating an experiment.');
+              if (!workspace || !project || !accessToken) {
+                throw new Error('A workspace, selected project, and active session are required before creating an experiment.');
               }
 
               const createdExperiment = await createExperiment(
@@ -76,7 +79,7 @@ export default function ExperimentsPage() {
                   title: values.title,
                   hypothesis: values.hypothesis,
                 },
-                userId,
+                accessToken,
                 apiBase,
               );
               setSelectedExperimentId(createdExperiment.id);
@@ -100,8 +103,8 @@ export default function ExperimentsPage() {
             ]}
             submitLabel="Create run"
             onSubmit={async (values) => {
-              if (!workspace || !experiment || !userId) {
-                throw new Error('A workspace, selected experiment, and active user are required before creating a run.');
+              if (!workspace || !experiment || !accessToken) {
+                throw new Error('A workspace, selected experiment, and active session are required before creating a run.');
               }
 
               const createdRun = await createRun(
@@ -112,7 +115,7 @@ export default function ExperimentsPage() {
                   randomSeed: values.randomSeed ? Number(values.randomSeed) : undefined,
                   notes: values.notes || undefined,
                 },
-                userId,
+                accessToken,
                 apiBase,
               );
               setSelectedRunId(createdRun.id);
@@ -193,7 +196,7 @@ export default function ExperimentsPage() {
 
         <RunDetailPanel
           workspaceId={workspace?.id}
-          userId={userId}
+          accessToken={accessToken}
           apiBase={apiBase}
           runDetail={runDetail}
           onRefresh={refresh}

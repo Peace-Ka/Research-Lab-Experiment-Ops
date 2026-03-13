@@ -8,7 +8,8 @@ type AppShellProps = PropsWithChildren<{
   title: string;
   subtitle: string;
   userId: string;
-  setUserId: (value: string) => void;
+  accessToken: string;
+  clearAuth: () => void;
   apiBase: string;
   setApiBase: (value: string) => void;
 }>;
@@ -23,7 +24,8 @@ export function AppShell({
   title,
   subtitle,
   userId,
-  setUserId,
+  accessToken,
+  clearAuth,
   apiBase,
   setApiBase,
   children,
@@ -54,9 +56,16 @@ export function AppShell({
           </label>
           <label>
             Active User ID
-            <input value={userId} onChange={(event) => setUserId(event.target.value)} placeholder="Paste x-user-id here" />
+            <input value={userId} readOnly placeholder="Authenticate to load user context" />
           </label>
-          <p className="hint">Use `/auth/register` or `/auth/login` below to get the current `x-user-id` value for live API calls.</p>
+          <label>
+            Access Token
+            <input value={accessToken ? 'Bearer token loaded' : ''} readOnly placeholder="Authenticate to store a bearer token" />
+          </label>
+          <button className="secondary-button" type="button" onClick={clearAuth}>
+            Sign out locally
+          </button>
+          <p className="hint">The shell now uses bearer auth for live API calls. The legacy x-user-id transport is only a fallback.</p>
         </div>
       </aside>
 
