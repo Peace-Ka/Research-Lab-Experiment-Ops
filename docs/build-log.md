@@ -161,3 +161,13 @@ pm run web:build`n- Result: The experiments page now lets the user choose a spec
   - `npm.cmd run prisma:seed` (blocked because local Docker/Postgres was not running after restart)
 - Result: Frontend analytics panel compiles cleanly, unit tests pass, and the delivery plan is documented. Local reseeding will succeed once Docker Desktop is running again.
 - Follow-up: Start Docker Desktop, rerun `npm.cmd run prisma:seed`, then move to true object storage upload.
+
+## 2026-03-13 02:05 CST
+- Summary: Replaced artifact metadata-only registration with backend-managed file upload and download handling.
+- Files changed: `apps/api/src/modules/runs/*`, `apps/api/test/runs.service.spec.ts`, `apps/web/src/lib/api.ts`, `apps/web/src/components/run-detail-panel.tsx`, `.gitignore`, `prisma/seed.ts`
+- Commands run:
+  - `npm.cmd run test`
+  - `npm.cmd run prisma:seed`
+  - `npm.cmd run web:build`
+- Result: Artifacts are now uploaded through the API, persisted to local storage, downloadable from run detail, and represented in seeded demo data with actual files on disk.
+- Follow-up: Replace local storage with MinIO/S3-backed object storage and add preview support for images/logs.

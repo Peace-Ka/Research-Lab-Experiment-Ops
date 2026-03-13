@@ -31,3 +31,5 @@
 - Seeded demo artifacts and exposed artifact registration from the run detail panel.
 - Added experiment analytics with run-status distribution and selected-run metric trend charts.
 - Added an 8-week delivery roadmap covering portfolio-strong, robust, and optional polish phases.
+- Replaced artifact metadata-only registration with backend-managed file upload and download support.
+- Seeded real local demo artifact files so evidence downloads work in the local walkthrough.

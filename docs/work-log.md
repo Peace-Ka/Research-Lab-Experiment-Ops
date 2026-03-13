@@ -35,3 +35,5 @@
 - Seeded demo artifacts and surfaced them in the run detail panel alongside metrics, params, and checklist state.
 - Added a dedicated analytics panel on the experiments page with run-status distribution and selected-run metric trend charts.
 - Added an 8-week delivery roadmap to keep the remaining scope controlled through the next two months.
+- Replaced artifact metadata-only registration with actual backend-managed file persistence and download support.
+- Seeded demo artifact files on disk so download behavior works in the local walkthrough, not just the database records.
