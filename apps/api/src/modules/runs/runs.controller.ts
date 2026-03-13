@@ -1,4 +1,17 @@
-import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Res,
+  StreamableFile,
+  UploadedFile,
+  UseInterceptors,
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { Response } from 'express';
 import { CurrentUserId } from '../../common/auth/current-user-id.decorator';
 import { CreateRunArtifactDto } from './dto/create-run-artifact.dto';
 import { CreateRunMetricDto } from './dto/create-run-metric.dto';
@@ -28,6 +41,19 @@ export class RunsController {
     @CurrentUserId() userId: string,
   ) {
     return this.runsService.findOne(workspaceId, runId, userId);
+  }
+
+  @Get('workspaces/:workspaceId/runs/:runId/artifacts/:artifactId/download')
+  async downloadArtifact(
+    @Param('workspaceId') workspaceId: string,
+    @Param('runId') runId: string,
+    @Param('artifactId') artifactId: string,
+    @CurrentUserId() userId: string,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const artifact = await this.runsService.getArtifactFile(workspaceId, runId, artifactId, userId);
+    response.setHeader('Content-Disposition', `attachment; filename="${artifact.fileName}"`);
+    return new StreamableFile(artifact.stream);
   }
 
   @Post('workspaces/:workspaceId/experiments/:experimentId/runs')
@@ -71,13 +97,15 @@ export class RunsController {
   }
 
   @Post('workspaces/:workspaceId/runs/:runId/artifacts')
+  @UseInterceptors(FileInterceptor('file'))
   addArtifact(
     @Param('workspaceId') workspaceId: string,
     @Param('runId') runId: string,
     @Body() payload: CreateRunArtifactDto,
+    @UploadedFile() file: { originalname: string; buffer: Buffer; size: number } | undefined,
     @CurrentUserId() userId: string,
   ) {
-    return this.runsService.addArtifact(workspaceId, runId, payload, userId);
+    return this.runsService.addArtifact(workspaceId, runId, payload, file, userId);
   }
 
   @Patch('workspaces/:workspaceId/runs/:runId/checklist/:checklistItemId')
@@ -91,3 +119,4 @@ export class RunsController {
     return this.runsService.updateChecklistState(workspaceId, runId, checklistItemId, payload, userId);
   }
 }
+

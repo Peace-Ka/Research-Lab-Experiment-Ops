@@ -2,6 +2,7 @@
 
 import { AppShell } from '../../components/app-shell';
 import { CreateRecordPanel } from '../../components/create-record-panel';
+import { MetricVisualizationPanel } from '../../components/metric-visualization-panel';
 import { RunDetailPanel } from '../../components/run-detail-panel';
 import { createExperiment, createRun } from '../../lib/api';
 import { useLabOpsData } from '../../lib/use-labops-data';
@@ -187,6 +188,8 @@ export default function ExperimentsPage() {
             </div>
           </section>
         </div>
+
+        <MetricVisualizationPanel runs={runs} runDetail={runDetail} />
 
         <RunDetailPanel
           workspaceId={workspace?.id}

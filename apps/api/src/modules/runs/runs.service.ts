@@ -1,3 +1,7 @@
+import { createHash } from 'crypto';
+import { createReadStream } from 'fs';
+import { access, mkdir, writeFile } from 'fs/promises';
+import { extname, join } from 'path';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, RunStatus, WorkspaceRole } from '@prisma/client';
 import { AuditService } from '../audit/audit.service';
@@ -12,6 +16,8 @@ import { UpdateRunStatusDto } from './dto/update-run-status.dto';
 
 @Injectable()
 export class RunsService {
+  private readonly artifactRoot = join(process.cwd(), 'storage', 'artifacts');
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
@@ -25,11 +31,20 @@ export class RunsService {
     };
   }
 
-  private normalizeRun<T extends { artifacts: Array<{ sizeBytes: bigint | null }> }>(run: T) {
+  private normalizeRun<T extends { artifacts?: Array<{ sizeBytes: bigint | null }> }>(run: T) {
     return {
       ...run,
       artifacts: (run.artifacts ?? []).map((artifact) => this.normalizeArtifact(artifact)),
     };
+  }
+
+  private async ensureArtifactRoot() {
+    await mkdir(this.artifactRoot, { recursive: true });
+  }
+
+  private buildStorageKey(runId: string, fileName: string) {
+    const safeName = fileName.replace(/[^a-zA-Z0-9._-]/g, '-');
+    return join(runId, `${Date.now()}${extname(safeName) ? `-${safeName}` : `-${safeName}.bin`}`);
   }
 
   async findAll(workspaceId: string, experimentId: string, userId: string) {
@@ -81,6 +96,32 @@ export class RunsService {
     }
 
     return this.normalizeRun(run);
+  }
+
+  async getArtifactFile(workspaceId: string, runId: string, artifactId: string, userId: string) {
+    await this.workspaceAccess.requireMembership(workspaceId, userId);
+
+    const artifact = await this.prisma.artifact.findFirst({
+      where: {
+        id: artifactId,
+        runId,
+        run: {
+          workspaceId,
+        },
+      },
+    });
+
+    if (!artifact) {
+      throw new NotFoundException(`Artifact ${artifactId} not found for run ${runId}`);
+    }
+
+    const filePath = join(this.artifactRoot, artifact.storageKey);
+    await access(filePath);
+
+    return {
+      fileName: artifact.fileName,
+      stream: createReadStream(filePath),
+    };
   }
 
   async create(workspaceId: string, experimentId: string, payload: CreateRunDto, userId: string) {
@@ -199,7 +240,13 @@ export class RunsService {
     return metric;
   }
 
-  async addArtifact(workspaceId: string, runId: string, payload: CreateRunArtifactDto, userId: string) {
+  async addArtifact(
+    workspaceId: string,
+    runId: string,
+    payload: CreateRunArtifactDto,
+    file: { originalname: string; buffer: Buffer; size: number } | undefined,
+    userId: string,
+  ) {
     await this.workspaceAccess.requireMembership(workspaceId, userId, [
       WorkspaceRole.owner,
       WorkspaceRole.maintainer,
@@ -207,14 +254,25 @@ export class RunsService {
     ]);
     await this.findOne(workspaceId, runId, userId);
 
+    if (!file) {
+      throw new NotFoundException('Artifact upload file was not provided.');
+    }
+
+    await this.ensureArtifactRoot();
+    const storageKey = this.buildStorageKey(runId, file.originalname);
+    const checksumSha256 = createHash('sha256').update(file.buffer).digest('hex');
+    const filePath = join(this.artifactRoot, storageKey);
+    await mkdir(join(this.artifactRoot, runId), { recursive: true });
+    await writeFile(filePath, file.buffer);
+
     const artifact = await this.prisma.artifact.create({
       data: {
         runId,
         type: payload.type,
-        fileName: payload.fileName,
-        storageKey: payload.storageKey,
-        checksumSha256: payload.checksumSha256,
-        sizeBytes: payload.sizeBytes === undefined ? undefined : BigInt(payload.sizeBytes),
+        fileName: file.originalname,
+        storageKey,
+        checksumSha256,
+        sizeBytes: BigInt(file.size),
       },
     });
 
@@ -263,5 +321,4 @@ export class RunsService {
     return checklistState;
   }
 }
-
 

@@ -7,5 +7,6 @@ import { WorkspacesModule } from '../workspaces/workspaces.module';
   imports: [WorkspacesModule],
   controllers: [RunsController],
   providers: [RunsService],
+  exports: [RunsService],
 })
 export class RunsModule {}

@@ -1,3 +1,9 @@
+jest.mock('fs/promises', () => ({
+  access: jest.fn(),
+  mkdir: jest.fn(),
+  writeFile: jest.fn(),
+}));
+
 import { NotFoundException } from '@nestjs/common';
 import { ArtifactType, ChecklistStatus, RunStatus } from '@prisma/client';
 import { RunsService } from '../src/modules/runs/runs.service';
@@ -24,6 +30,7 @@ describe('RunsService', () => {
     },
     artifact: {
       create: jest.fn(),
+      findFirst: jest.fn(),
     },
     runChecklistState: {
       upsert: jest.fn(),
@@ -108,33 +115,31 @@ describe('RunsService', () => {
     expect(result.id).toBe('metric_1');
   });
 
-  it('creates an artifact record for a run', async () => {
+  it('stores an uploaded artifact for a run', async () => {
     workspaceAccess.requireMembership.mockResolvedValue({ role: 'researcher' });
     prisma.experimentRun.findFirst.mockResolvedValue({ id: 'run_1', workspaceId: 'ws_1' });
-    prisma.artifact.create.mockResolvedValue({ id: 'artifact_1', fileName: 'loss-curve.png', runId: 'run_1' });
+    prisma.artifact.create.mockResolvedValue({
+      id: 'artifact_1',
+      fileName: 'loss-curve.png',
+      runId: 'run_1',
+      sizeBytes: BigInt(2048),
+    });
 
-    const result = await service.addArtifact(
-      'ws_1',
-      'run_1',
-      {
-        type: ArtifactType.plot,
-        fileName: 'loss-curve.png',
-        storageKey: 'local-demo/run_1/loss-curve.png',
-        checksumSha256: 'abc123',
-        sizeBytes: 2048,
-      },
-      'user_1',
-    );
+    const file = {
+      originalname: 'loss-curve.png',
+      buffer: Buffer.from('chart-bytes'),
+      size: 2048,
+    } as any;
+
+    const result = await service.addArtifact('ws_1', 'run_1', { type: ArtifactType.plot }, file, 'user_1');
 
     expect(prisma.artifact.create).toHaveBeenCalledWith({
-      data: {
+      data: expect.objectContaining({
         runId: 'run_1',
         type: ArtifactType.plot,
         fileName: 'loss-curve.png',
-        storageKey: 'local-demo/run_1/loss-curve.png',
-        checksumSha256: 'abc123',
         sizeBytes: BigInt(2048),
-      },
+      }),
     });
     expect(audit.log).toHaveBeenCalledWith('run.artifact_create', 'artifact', 'artifact_1');
     expect(result.id).toBe('artifact_1');
@@ -182,3 +187,4 @@ describe('RunsService', () => {
     expect(result.id).toBe('state_1');
   });
 });
+

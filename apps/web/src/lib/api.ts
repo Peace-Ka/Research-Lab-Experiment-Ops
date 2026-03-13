@@ -109,7 +109,7 @@ async function request<T>(path: string, init?: RequestInit, userId?: string, api
     headers.set('x-user-id', userId);
   }
 
-  if (init?.body && !headers.has('Content-Type')) {
+  if (init?.body && !(init.body instanceof FormData) && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
   }
 
@@ -125,6 +125,41 @@ async function request<T>(path: string, init?: RequestInit, userId?: string, api
   }
 
   return response.json() as Promise<T>;
+}
+
+export async function downloadRunArtifact(
+  workspaceId: string,
+  runId: string,
+  artifactId: string,
+  fileName: string,
+  userId: string,
+  apiBase?: string,
+) {
+  const response = await fetch(
+    `${resolveApiBase(apiBase)}/workspaces/${workspaceId}/runs/${runId}/artifacts/${artifactId}/download`,
+    {
+      method: 'GET',
+      headers: {
+        'x-user-id': userId,
+      },
+      cache: 'no-store',
+    },
+  );
+
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || `Download failed with status ${response.status}`);
+  }
+
+  const blob = await response.blob();
+  const url = window.URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = fileName;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  window.URL.revokeObjectURL(url);
 }
 
 export async function registerUser(payload: { email: string; name: string; password: string }, apiBase?: string) {
@@ -302,19 +337,20 @@ export async function addRunArtifact(
   runId: string,
   payload: {
     type: 'model' | 'plot' | 'log' | 'checkpoint' | 'dataset_snapshot' | 'other';
-    fileName: string;
-    storageKey: string;
-    checksumSha256: string;
-    sizeBytes?: number;
+    file: File;
   },
   userId: string,
   apiBase?: string,
 ) {
+  const formData = new FormData();
+  formData.set('type', payload.type);
+  formData.set('file', payload.file);
+
   return request<RunArtifactRecord>(
     `/workspaces/${workspaceId}/runs/${runId}/artifacts`,
     {
       method: 'POST',
-      body: JSON.stringify(payload),
+      body: formData,
     },
     userId,
     apiBase,

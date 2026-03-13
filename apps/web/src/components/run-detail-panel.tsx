@@ -5,6 +5,7 @@ import {
   addRunArtifact,
   addRunMetric,
   addRunParam,
+  downloadRunArtifact,
   RunChecklistStateRecord,
   RunDetail,
   updateRunChecklistState,
@@ -45,14 +46,6 @@ function formatBytes(sizeBytes?: string | number | null) {
   }
 
   return `${raw} B`;
-}
-
-async function sha256Hex(file: File) {
-  const buffer = await file.arrayBuffer();
-  const digest = await crypto.subtle.digest('SHA-256', buffer);
-  return Array.from(new Uint8Array(digest))
-    .map((byte) => byte.toString(16).padStart(2, '0'))
-    .join('');
 }
 
 export function RunDetailPanel({ workspaceId, userId, apiBase, runDetail, onRefresh }: RunDetailPanelProps) {
@@ -190,18 +183,12 @@ export function RunDetailPanel({ workspaceId, userId, apiBase, runDetail, onRefr
     setError('');
 
     try {
-      const checksumSha256 = await sha256Hex(artifactFile);
-      const storageKey = `local-demo/${runDetail.id}/${Date.now()}-${artifactFile.name}`;
-
       await addRunArtifact(
         workspaceId,
         runDetail.id,
         {
           type: artifactType,
-          fileName: artifactFile.name,
-          storageKey,
-          checksumSha256,
-          sizeBytes: artifactFile.size,
+          file: artifactFile,
         },
         userId,
         apiBase,
@@ -213,7 +200,25 @@ export function RunDetailPanel({ workspaceId, userId, apiBase, runDetail, onRefr
       }
       await onRefresh();
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : 'Failed to register artifact.');
+      setError(submitError instanceof Error ? submitError.message : 'Failed to upload artifact.');
+    } finally {
+      setPending(false);
+    }
+  }
+
+  async function handleArtifactDownload(artifactId: string, fileName: string) {
+    if (!workspaceId || !runDetail || !userId) {
+      setError('Workspace, run, and user context are required.');
+      return;
+    }
+
+    setPending(true);
+    setError('');
+
+    try {
+      await downloadRunArtifact(workspaceId, runDetail.id, artifactId, fileName, userId, apiBase);
+    } catch (downloadError) {
+      setError(downloadError instanceof Error ? downloadError.message : 'Failed to download artifact.');
     } finally {
       setPending(false);
     }
@@ -328,7 +333,7 @@ export function RunDetailPanel({ workspaceId, userId, apiBase, runDetail, onRefr
             <section className="panel nested-panel">
               <p className="eyebrow">Evidence</p>
               <strong>{runDetail.artifacts.length}</strong>
-              <span className="muted">artifacts registered to this run</span>
+              <span className="muted">artifacts attached to this run</span>
               <strong>{runDetail.metrics.length}</strong>
               <span className="muted">metrics logged for this run</span>
             </section>
@@ -397,17 +402,17 @@ export function RunDetailPanel({ workspaceId, userId, apiBase, runDetail, onRefr
                   onChange={(event) => setArtifactFile(event.target.files?.[0] ?? null)}
                 />
                 <button className="secondary-button" type="submit" disabled={pending || !artifactFile}>
-                  Register artifact
+                  Upload artifact
                 </button>
               </form>
-              <p className="hint">This registers artifact metadata, checksum, and size against the run. Binary object storage comes next.</p>
+              <p className="hint">This now stores the file through the API and preserves a download path for the run.</p>
             </section>
 
             <section>
-              <p className="eyebrow">Registered evidence</p>
+              <p className="eyebrow">Stored evidence</p>
               <div className="list">
                 {runDetail.artifacts.length === 0 ? (
-                  <div className="list-item"><span className="muted">No artifacts registered for this run.</span></div>
+                  <div className="list-item"><span className="muted">No artifacts stored for this run.</span></div>
                 ) : (
                   runDetail.artifacts.map((artifact) => (
                     <div key={artifact.id} className="list-item">
@@ -415,6 +420,16 @@ export function RunDetailPanel({ workspaceId, userId, apiBase, runDetail, onRefr
                       <div className="inline-stat"><span>Type</span><span>{artifact.type}</span></div>
                       <div className="inline-stat"><span>Size</span><span>{formatBytes(artifact.sizeBytes)}</span></div>
                       <div className="inline-stat"><span>Key</span><span>{artifact.storageKey}</span></div>
+                      {workspaceId ? (
+                        <button
+                          className="secondary-button artifact-link"
+                          type="button"
+                          disabled={pending}
+                          onClick={() => void handleArtifactDownload(artifact.id, artifact.fileName)}
+                        >
+                          Download
+                        </button>
+                      ) : null}
                     </div>
                   ))
                 )}

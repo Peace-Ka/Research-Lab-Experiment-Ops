@@ -1,7 +1,10 @@
 import { scryptSync } from 'crypto';
+import { mkdir, rm, writeFile } from 'fs/promises';
+import { dirname, join } from 'path';
 import { ArtifactType, ChecklistStatus, PrismaClient, RunStatus, WorkspaceRole } from '@prisma/client';
 
 const prisma = new PrismaClient();
+const artifactRoot = join(process.cwd(), 'storage', 'artifacts');
 
 function hashPassword(password: string): string {
   const salt = 'labops-demo-salt';
@@ -9,7 +12,19 @@ function hashPassword(password: string): string {
   return `${salt}:${hash}`;
 }
 
+async function resetArtifactStorage() {
+  await rm(artifactRoot, { recursive: true, force: true });
+  await mkdir(artifactRoot, { recursive: true });
+}
+
+async function writeArtifactFile(storageKey: string, content: string) {
+  const targetPath = join(artifactRoot, storageKey);
+  await mkdir(dirname(targetPath), { recursive: true });
+  await writeFile(targetPath, content);
+}
+
 async function seed(): Promise<void> {
+  await resetArtifactStorage();
   await prisma.runChecklistState.deleteMany();
   await prisma.reproChecklistItem.deleteMany();
   await prisma.artifact.deleteMany();
@@ -132,40 +147,55 @@ async function seed(): Promise<void> {
 
   await prisma.runMetric.createMany({
     data: [
+      { runId: runOne.id, key: 'accuracy', value: 0.821, step: 4 },
+      { runId: runOne.id, key: 'accuracy', value: 0.887, step: 8 },
       { runId: runOne.id, key: 'accuracy', value: 0.914, step: 12 },
+      { runId: runOne.id, key: 'loss', value: 0.641, step: 4 },
+      { runId: runOne.id, key: 'loss', value: 0.332, step: 8 },
       { runId: runOne.id, key: 'loss', value: 0.214, step: 12 },
+      { runId: runTwo.id, key: 'accuracy', value: 0.612, step: 4 },
+      { runId: runTwo.id, key: 'accuracy', value: 0.688, step: 8 },
       { runId: runTwo.id, key: 'accuracy', value: 0.671, step: 12 },
+      { runId: runTwo.id, key: 'loss', value: 1.204, step: 4 },
+      { runId: runTwo.id, key: 'loss', value: 1.118, step: 8 },
       { runId: runTwo.id, key: 'loss', value: 1.402, step: 12 },
     ],
   });
 
+  const seededArtifacts = [
+    {
+      runId: runOne.id,
+      type: ArtifactType.plot,
+      fileName: 'loss-curve.png',
+      storageKey: `${runOne.id}/loss-curve.png`,
+      checksumSha256: '8d2668f302f8b3f4d4f733889f65ef1111111111111111111111111111111111',
+      sizeBytes: 245760,
+      content: 'seeded plot placeholder for loss curve',
+    },
+    {
+      runId: runOne.id,
+      type: ArtifactType.log,
+      fileName: 'train.log',
+      storageKey: `${runOne.id}/train.log`,
+      checksumSha256: '7a65540470686d3669d4e92940c2222222222222222222222222222222222222',
+      sizeBytes: 98304,
+      content: 'epoch 12 complete\naccuracy=0.914\nloss=0.214',
+    },
+    {
+      runId: runTwo.id,
+      type: ArtifactType.checkpoint,
+      fileName: 'failed-epoch-12.ckpt',
+      storageKey: `${runTwo.id}/failed-epoch-12.ckpt`,
+      checksumSha256: '25bb0df655ec1c21e2cf838213c3333333333333333333333333333333333333',
+      sizeBytes: 6291456,
+      content: 'seeded checkpoint placeholder for failed run',
+    },
+  ];
+
+  await Promise.all(seededArtifacts.map((artifact) => writeArtifactFile(artifact.storageKey, artifact.content)));
+
   await prisma.artifact.createMany({
-    data: [
-      {
-        runId: runOne.id,
-        type: ArtifactType.plot,
-        fileName: 'loss-curve.png',
-        storageKey: `local-demo/${runOne.id}/loss-curve.png`,
-        checksumSha256: '8d2668f302f8b3f4d4f733889f65ef1111111111111111111111111111111111',
-        sizeBytes: 245760,
-      },
-      {
-        runId: runOne.id,
-        type: ArtifactType.log,
-        fileName: 'train.log',
-        storageKey: `local-demo/${runOne.id}/train.log`,
-        checksumSha256: '7a65540470686d3669d4e92940c2222222222222222222222222222222222222',
-        sizeBytes: 98304,
-      },
-      {
-        runId: runTwo.id,
-        type: ArtifactType.checkpoint,
-        fileName: 'failed-epoch-12.ckpt',
-        storageKey: `local-demo/${runTwo.id}/failed-epoch-12.ckpt`,
-        checksumSha256: '25bb0df655ec1c21e2cf838213c3333333333333333333333333333333333333',
-        sizeBytes: 6291456,
-      },
-    ],
+    data: seededArtifacts.map(({ content, ...artifact }) => artifact),
   });
 
   const checklistByCode = new Map(checklistItems.map((item) => [item.code, item.id]));
@@ -188,7 +218,7 @@ async function seed(): Promise<void> {
         runId: runOne.id,
         checklistItemId: checklistByCode.get('metrics-logged')!,
         status: ChecklistStatus.passed,
-        note: 'Accuracy and loss recorded at step 12.',
+        note: 'Accuracy and loss recorded across three checkpoints.',
       },
       {
         runId: runOne.id,
@@ -212,7 +242,7 @@ async function seed(): Promise<void> {
         runId: runTwo.id,
         checklistItemId: checklistByCode.get('metrics-logged')!,
         status: ChecklistStatus.failed,
-        note: 'Failure metrics were logged, but final evaluation is incomplete.',
+        note: 'Loss diverged by epoch 12 and final evaluation is incomplete.',
       },
       {
         runId: runTwo.id,
@@ -240,3 +270,4 @@ void seed()
   .finally(async () => {
     await prisma.$disconnect();
   });
+
