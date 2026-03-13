@@ -1,12 +1,11 @@
 'use client';
 
-import Link from 'next/link';
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from 'react';
 import {
   addRunArtifact,
   addRunMetric,
   addRunParam,
-  buildArtifactDownloadUrl,
+  downloadRunArtifact,
   RunChecklistStateRecord,
   RunDetail,
   updateRunChecklistState,
@@ -202,6 +201,24 @@ export function RunDetailPanel({ workspaceId, userId, apiBase, runDetail, onRefr
       await onRefresh();
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : 'Failed to upload artifact.');
+    } finally {
+      setPending(false);
+    }
+  }
+
+  async function handleArtifactDownload(artifactId: string, fileName: string) {
+    if (!workspaceId || !runDetail || !userId) {
+      setError('Workspace, run, and user context are required.');
+      return;
+    }
+
+    setPending(true);
+    setError('');
+
+    try {
+      await downloadRunArtifact(workspaceId, runDetail.id, artifactId, fileName, userId, apiBase);
+    } catch (downloadError) {
+      setError(downloadError instanceof Error ? downloadError.message : 'Failed to download artifact.');
     } finally {
       setPending(false);
     }
@@ -404,13 +421,14 @@ export function RunDetailPanel({ workspaceId, userId, apiBase, runDetail, onRefr
                       <div className="inline-stat"><span>Size</span><span>{formatBytes(artifact.sizeBytes)}</span></div>
                       <div className="inline-stat"><span>Key</span><span>{artifact.storageKey}</span></div>
                       {workspaceId ? (
-                        <a
+                        <button
                           className="secondary-button artifact-link"
-                          href={buildArtifactDownloadUrl(workspaceId, runDetail.id, artifact.id, apiBase)}
-                          target="_blank" rel="noreferrer"
+                          type="button"
+                          disabled={pending}
+                          onClick={() => void handleArtifactDownload(artifact.id, artifact.fileName)}
                         >
                           Download
-                        </a>
+                        </button>
                       ) : null}
                     </div>
                   ))
@@ -480,4 +498,3 @@ export function RunDetailPanel({ workspaceId, userId, apiBase, runDetail, onRefr
     </section>
   );
 }
-

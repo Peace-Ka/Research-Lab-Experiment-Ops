@@ -127,8 +127,39 @@ async function request<T>(path: string, init?: RequestInit, userId?: string, api
   return response.json() as Promise<T>;
 }
 
-export function buildArtifactDownloadUrl(workspaceId: string, runId: string, artifactId: string, apiBase?: string) {
-  return `${resolveApiBase(apiBase)}/workspaces/${workspaceId}/runs/${runId}/artifacts/${artifactId}/download`;
+export async function downloadRunArtifact(
+  workspaceId: string,
+  runId: string,
+  artifactId: string,
+  fileName: string,
+  userId: string,
+  apiBase?: string,
+) {
+  const response = await fetch(
+    `${resolveApiBase(apiBase)}/workspaces/${workspaceId}/runs/${runId}/artifacts/${artifactId}/download`,
+    {
+      method: 'GET',
+      headers: {
+        'x-user-id': userId,
+      },
+      cache: 'no-store',
+    },
+  );
+
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || `Download failed with status ${response.status}`);
+  }
+
+  const blob = await response.blob();
+  const url = window.URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = fileName;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  window.URL.revokeObjectURL(url);
 }
 
 export async function registerUser(payload: { email: string; name: string; password: string }, apiBase?: string) {

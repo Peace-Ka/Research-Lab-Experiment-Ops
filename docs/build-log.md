@@ -171,3 +171,4 @@ pm run web:build`n- Result: The experiments page now lets the user choose a spec
   - `npm.cmd run web:build`
 - Result: Artifacts are now uploaded through the API, persisted to local storage, downloadable from run detail, and represented in seeded demo data with actual files on disk.
 - Follow-up: Replace local storage with MinIO/S3-backed object storage and add preview support for images/logs.
+- Update: switched artifact downloads from plain anchor links to authenticated blob fetches because browser links cannot send the required `x-user-id` header.

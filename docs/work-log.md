@@ -37,3 +37,4 @@
 - Added an 8-week delivery roadmap to keep the remaining scope controlled through the next two months.
 - Replaced artifact metadata-only registration with actual backend-managed file persistence and download support.
 - Seeded demo artifact files on disk so download behavior works in the local walkthrough, not just the database records.
+- Fixed artifact downloads by replacing unauthenticated anchor links with authenticated client-side fetch/download behavior.
