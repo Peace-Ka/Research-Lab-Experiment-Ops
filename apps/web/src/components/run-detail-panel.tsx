@@ -2,6 +2,7 @@
 
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from 'react';
 import {
+  addRunArtifact,
   addRunMetric,
   addRunParam,
   RunChecklistStateRecord,
@@ -20,9 +21,39 @@ type RunDetailPanelProps = {
 
 const RUN_STATUSES = ['queued', 'running', 'completed', 'failed', 'canceled'] as const;
 const CHECKLIST_STATUSES = ['pending', 'passed', 'failed', 'waived'] as const;
+const ARTIFACT_TYPES = ['plot', 'log', 'checkpoint', 'model', 'dataset_snapshot', 'other'] as const;
 const EMPTY_CHECKLIST: RunChecklistStateRecord[] = [];
 
 type ChecklistDraftMap = Record<string, string>;
+
+function formatBytes(sizeBytes?: string | number | null) {
+  if (sizeBytes === undefined || sizeBytes === null) {
+    return 'unknown size';
+  }
+
+  const raw = typeof sizeBytes === 'string' ? Number(sizeBytes) : sizeBytes;
+  if (!Number.isFinite(raw) || raw <= 0) {
+    return '0 B';
+  }
+
+  if (raw >= 1024 * 1024) {
+    return `${(raw / (1024 * 1024)).toFixed(1)} MB`;
+  }
+
+  if (raw >= 1024) {
+    return `${(raw / 1024).toFixed(1)} KB`;
+  }
+
+  return `${raw} B`;
+}
+
+async function sha256Hex(file: File) {
+  const buffer = await file.arrayBuffer();
+  const digest = await crypto.subtle.digest('SHA-256', buffer);
+  return Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('');
+}
 
 export function RunDetailPanel({ workspaceId, userId, apiBase, runDetail, onRefresh }: RunDetailPanelProps) {
   const [paramKey, setParamKey] = useState('');
@@ -30,6 +61,8 @@ export function RunDetailPanel({ workspaceId, userId, apiBase, runDetail, onRefr
   const [metricKey, setMetricKey] = useState('');
   const [metricValue, setMetricValue] = useState('');
   const [metricStep, setMetricStep] = useState('');
+  const [artifactType, setArtifactType] = useState<(typeof ARTIFACT_TYPES)[number]>('plot');
+  const [artifactFile, setArtifactFile] = useState<File | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<(typeof RUN_STATUSES)[number]>('queued');
   const [checklistNotes, setChecklistNotes] = useState<ChecklistDraftMap>({});
   const [error, setError] = useState('');
@@ -79,15 +112,7 @@ export function RunDetailPanel({ workspaceId, userId, apiBase, runDetail, onRefr
     setError('');
 
     try {
-      await updateRunStatus(
-        workspaceId,
-        runDetail.id,
-        {
-          status: selectedStatus,
-        },
-        userId,
-        apiBase,
-      );
+      await updateRunStatus(workspaceId, runDetail.id, { status: selectedStatus }, userId, apiBase);
       await onRefresh();
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : 'Failed to update run status.');
@@ -108,16 +133,7 @@ export function RunDetailPanel({ workspaceId, userId, apiBase, runDetail, onRefr
     setError('');
 
     try {
-      await addRunParam(
-        workspaceId,
-        runDetail.id,
-        {
-          key: paramKey,
-          value: paramValue,
-        },
-        userId,
-        apiBase,
-      );
+      await addRunParam(workspaceId, runDetail.id, { key: paramKey, value: paramValue }, userId, apiBase);
       setParamKey('');
       setParamValue('');
       await onRefresh();
@@ -157,6 +173,47 @@ export function RunDetailPanel({ workspaceId, userId, apiBase, runDetail, onRefr
       await onRefresh();
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : 'Failed to save metric.');
+    } finally {
+      setPending(false);
+    }
+  }
+
+  async function handleArtifactSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!workspaceId || !runDetail || !userId || !artifactFile) {
+      setError('Workspace, run, user, and artifact file are required.');
+      return;
+    }
+
+    setPending(true);
+    setError('');
+
+    try {
+      const checksumSha256 = await sha256Hex(artifactFile);
+      const storageKey = `local-demo/${runDetail.id}/${Date.now()}-${artifactFile.name}`;
+
+      await addRunArtifact(
+        workspaceId,
+        runDetail.id,
+        {
+          type: artifactType,
+          fileName: artifactFile.name,
+          storageKey,
+          checksumSha256,
+          sizeBytes: artifactFile.size,
+        },
+        userId,
+        apiBase,
+      );
+      setArtifactFile(null);
+      const input = document.getElementById('artifact-upload-input') as HTMLInputElement | null;
+      if (input) {
+        input.value = '';
+      }
+      await onRefresh();
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : 'Failed to register artifact.');
     } finally {
       setPending(false);
     }
@@ -234,7 +291,7 @@ export function RunDetailPanel({ workspaceId, userId, apiBase, runDetail, onRefr
       </div>
 
       {!runDetail ? (
-        <p className="muted">Select a run to inspect parameters, metrics, checklist state, and notes.</p>
+        <p className="muted">Select a run to inspect parameters, metrics, checklist state, artifacts, and notes.</p>
       ) : (
         <div className="content-grid">
           <div className="callout">
@@ -264,18 +321,16 @@ export function RunDetailPanel({ workspaceId, userId, apiBase, runDetail, onRefr
 
             <section className="panel nested-panel">
               <p className="eyebrow">Reproducibility</p>
-              <strong>
-                {checklistSummary.passed}/{checklistSummary.total} checks passed
-              </strong>
+              <strong>{checklistSummary.passed}/{checklistSummary.total} checks passed</strong>
               <span className="muted">{checklistSummary.blocking} required checks still block this run.</span>
             </section>
 
             <section className="panel nested-panel">
-              <p className="eyebrow">Traceability</p>
+              <p className="eyebrow">Evidence</p>
+              <strong>{runDetail.artifacts.length}</strong>
+              <span className="muted">artifacts registered to this run</span>
               <strong>{runDetail.metrics.length}</strong>
               <span className="muted">metrics logged for this run</span>
-              <strong>{runDetail.params.length}</strong>
-              <span className="muted">parameters currently recorded</span>
             </section>
           </div>
 
@@ -323,6 +378,48 @@ export function RunDetailPanel({ workspaceId, userId, apiBase, runDetail, onRefr
                 )}
               </div>
             </div>
+          </div>
+
+          <div className="two-column compact-two-column">
+            <section>
+              <p className="eyebrow">Artifacts</p>
+              <form className="inline-form" onSubmit={handleArtifactSubmit}>
+                <select value={artifactType} onChange={(event) => setArtifactType(event.target.value as (typeof ARTIFACT_TYPES)[number])}>
+                  {ARTIFACT_TYPES.map((type) => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  id="artifact-upload-input"
+                  type="file"
+                  onChange={(event) => setArtifactFile(event.target.files?.[0] ?? null)}
+                />
+                <button className="secondary-button" type="submit" disabled={pending || !artifactFile}>
+                  Register artifact
+                </button>
+              </form>
+              <p className="hint">This registers artifact metadata, checksum, and size against the run. Binary object storage comes next.</p>
+            </section>
+
+            <section>
+              <p className="eyebrow">Registered evidence</p>
+              <div className="list">
+                {runDetail.artifacts.length === 0 ? (
+                  <div className="list-item"><span className="muted">No artifacts registered for this run.</span></div>
+                ) : (
+                  runDetail.artifacts.map((artifact) => (
+                    <div key={artifact.id} className="list-item">
+                      <strong>{artifact.fileName}</strong>
+                      <div className="inline-stat"><span>Type</span><span>{artifact.type}</span></div>
+                      <div className="inline-stat"><span>Size</span><span>{formatBytes(artifact.sizeBytes)}</span></div>
+                      <div className="inline-stat"><span>Key</span><span>{artifact.storageKey}</span></div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </section>
           </div>
 
           <div>

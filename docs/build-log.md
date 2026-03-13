@@ -141,3 +141,13 @@ pm run web:build`n- Result: The experiments page now lets the user choose a spec
   - `npm.cmd run web:build`
 - Result: Demo runs now carry meaningful checklist state, the run detail panel can update lifecycle status and checklist items, unit tests pass, seed succeeds, and the frontend production build is clean.
 - Follow-up: Add artifact upload and metric visualizations so evidence and outcomes are not text-only.
+
+## 2026-03-12 11:35 CST
+- Summary: Added run artifact registration, seeded artifact evidence, and surfaced artifact management in the run detail UI.
+- Files changed: `apps/api/src/modules/runs/*`, `apps/api/test/runs.service.spec.ts`, `apps/web/src/lib/api.ts`, `apps/web/src/components/run-detail-panel.tsx`, `apps/web/src/app/globals.css`, `prisma/seed.ts`
+- Commands run:
+  - `npm.cmd run test`
+  - `npm.cmd run prisma:seed`
+  - `npm.cmd run web:build`
+- Result: Runs can now register artifact metadata with type, storage key, checksum, and size; demo data includes evidence artifacts; backend tests pass; frontend production build is clean.
+- Follow-up: Add true object storage upload (MinIO/S3) and artifact preview/download behavior.

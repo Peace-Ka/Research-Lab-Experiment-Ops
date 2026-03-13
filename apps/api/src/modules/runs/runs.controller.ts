@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
 import { CurrentUserId } from '../../common/auth/current-user-id.decorator';
+import { CreateRunArtifactDto } from './dto/create-run-artifact.dto';
 import { CreateRunMetricDto } from './dto/create-run-metric.dto';
 import { CreateRunParamDto } from './dto/create-run-param.dto';
 import { CreateRunDto } from './dto/create-run.dto';
@@ -67,6 +68,16 @@ export class RunsController {
     @CurrentUserId() userId: string,
   ) {
     return this.runsService.addMetric(workspaceId, runId, payload, userId);
+  }
+
+  @Post('workspaces/:workspaceId/runs/:runId/artifacts')
+  addArtifact(
+    @Param('workspaceId') workspaceId: string,
+    @Param('runId') runId: string,
+    @Body() payload: CreateRunArtifactDto,
+    @CurrentUserId() userId: string,
+  ) {
+    return this.runsService.addArtifact(workspaceId, runId, payload, userId);
   }
 
   @Patch('workspaces/:workspaceId/runs/:runId/checklist/:checklistItemId')

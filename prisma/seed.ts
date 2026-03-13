@@ -1,5 +1,5 @@
 import { scryptSync } from 'crypto';
-import { ChecklistStatus, PrismaClient, RunStatus, WorkspaceRole } from '@prisma/client';
+import { ArtifactType, ChecklistStatus, PrismaClient, RunStatus, WorkspaceRole } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -12,6 +12,7 @@ function hashPassword(password: string): string {
 async function seed(): Promise<void> {
   await prisma.runChecklistState.deleteMany();
   await prisma.reproChecklistItem.deleteMany();
+  await prisma.artifact.deleteMany();
   await prisma.runMetric.deleteMany();
   await prisma.runParam.deleteMany();
   await prisma.experimentRun.deleteMany();
@@ -135,6 +136,35 @@ async function seed(): Promise<void> {
       { runId: runOne.id, key: 'loss', value: 0.214, step: 12 },
       { runId: runTwo.id, key: 'accuracy', value: 0.671, step: 12 },
       { runId: runTwo.id, key: 'loss', value: 1.402, step: 12 },
+    ],
+  });
+
+  await prisma.artifact.createMany({
+    data: [
+      {
+        runId: runOne.id,
+        type: ArtifactType.plot,
+        fileName: 'loss-curve.png',
+        storageKey: `local-demo/${runOne.id}/loss-curve.png`,
+        checksumSha256: '8d2668f302f8b3f4d4f733889f65ef1111111111111111111111111111111111',
+        sizeBytes: 245760,
+      },
+      {
+        runId: runOne.id,
+        type: ArtifactType.log,
+        fileName: 'train.log',
+        storageKey: `local-demo/${runOne.id}/train.log`,
+        checksumSha256: '7a65540470686d3669d4e92940c2222222222222222222222222222222222222',
+        sizeBytes: 98304,
+      },
+      {
+        runId: runTwo.id,
+        type: ArtifactType.checkpoint,
+        fileName: 'failed-epoch-12.ckpt',
+        storageKey: `local-demo/${runTwo.id}/failed-epoch-12.ckpt`,
+        checksumSha256: '25bb0df655ec1c21e2cf838213c3333333333333333333333333333333333333',
+        sizeBytes: 6291456,
+      },
     ],
   });
 

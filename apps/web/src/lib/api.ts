@@ -65,6 +65,16 @@ export type RunMetricRecord = {
   loggedAt: string;
 };
 
+export type RunArtifactRecord = {
+  id: string;
+  type: 'model' | 'plot' | 'log' | 'checkpoint' | 'dataset_snapshot' | 'other';
+  fileName: string;
+  storageKey: string;
+  checksumSha256: string;
+  sizeBytes?: string | number | null;
+  uploadedAt: string;
+};
+
 export type RunChecklistStateRecord = {
   id: string;
   status: 'pending' | 'passed' | 'failed' | 'waived';
@@ -84,6 +94,7 @@ export type RunDetail = RunSummary & {
   notes?: string | null;
   params: RunParamRecord[];
   metrics: RunMetricRecord[];
+  artifacts: RunArtifactRecord[];
   checklistStates: RunChecklistStateRecord[];
 };
 
@@ -277,6 +288,30 @@ export async function addRunMetric(
 ) {
   return request<RunMetricRecord>(
     `/workspaces/${workspaceId}/runs/${runId}/metrics`,
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    },
+    userId,
+    apiBase,
+  );
+}
+
+export async function addRunArtifact(
+  workspaceId: string,
+  runId: string,
+  payload: {
+    type: 'model' | 'plot' | 'log' | 'checkpoint' | 'dataset_snapshot' | 'other';
+    fileName: string;
+    storageKey: string;
+    checksumSha256: string;
+    sizeBytes?: number;
+  },
+  userId: string,
+  apiBase?: string,
+) {
+  return request<RunArtifactRecord>(
+    `/workspaces/${workspaceId}/runs/${runId}/artifacts`,
     {
       method: 'POST',
       body: JSON.stringify(payload),
