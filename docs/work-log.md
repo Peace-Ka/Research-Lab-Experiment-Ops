@@ -38,3 +38,7 @@
 - Replaced artifact metadata-only registration with actual backend-managed file persistence and download support.
 - Seeded demo artifact files on disk so download behavior works in the local walkthrough, not just the database records.
 - Fixed artifact downloads by replacing unauthenticated anchor links with authenticated client-side fetch/download behavior.
+- Replaced the temporary `x-user-id` web shell flow with signed bearer-token authentication and a global auth guard.
+- Added `@Public()` route handling for health/register/login so the global guard does not block bootstrap flows.
+- Updated the web session layer to persist both `userId` and `accessToken`, then migrated API calls, downloads, and run workflow actions to use bearer auth.
+- Added `JWT_SECRET` to the environment template and ignored generated `*.tsbuildinfo` artifacts.

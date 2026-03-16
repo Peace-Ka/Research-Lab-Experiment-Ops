@@ -5,7 +5,7 @@ import { loginUser, registerUser } from '../lib/api';
 
 type AuthPanelProps = {
   apiBase: string;
-  onAuthenticated: (userId: string) => void;
+  onAuthenticated: (payload: { userId: string; accessToken: string }) => void;
 };
 
 export function AuthPanel({ apiBase, onAuthenticated }: AuthPanelProps) {
@@ -28,8 +28,11 @@ export function AuthPanel({ apiBase, onAuthenticated }: AuthPanelProps) {
         ? await registerUser({ email, name, password }, apiBase)
         : await loginUser({ email, password }, apiBase);
 
-      onAuthenticated(result.authContext.userId);
-      setMessage(`${result.message}. User ID loaded into the shell.`);
+      onAuthenticated({
+        userId: result.user.id,
+        accessToken: result.accessToken,
+      });
+      setMessage(`${result.message}. Bearer token loaded into the shell.`);
     } catch (authError) {
       setError(authError instanceof Error ? authError.message : 'Authentication request failed');
     } finally {

@@ -23,7 +23,7 @@ type UseLabOpsDataOptions = {
   onRunResolved?: (runId: string) => void;
 };
 
-export function useLabOpsData(userId: string, apiBase: string, options: UseLabOpsDataOptions = {}) {
+export function useLabOpsData(accessToken: string, apiBase: string, options: UseLabOpsDataOptions = {}) {
   const [workspaces, setWorkspaces] = useState<WorkspaceSummary[]>([]);
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [experiments, setExperiments] = useState<ExperimentSummary[]>([]);
@@ -40,7 +40,7 @@ export function useLabOpsData(userId: string, apiBase: string, options: UseLabOp
   const onRunResolved = options.onRunResolved;
 
   const refresh = useCallback(async () => {
-    if (!userId) {
+    if (!accessToken) {
       setWorkspaces([]);
       setProjects([]);
       setExperiments([]);
@@ -54,7 +54,7 @@ export function useLabOpsData(userId: string, apiBase: string, options: UseLabOp
     setError(null);
 
     try {
-      const workspaceResult = await fetchWorkspaces(userId, apiBase);
+      const workspaceResult = await fetchWorkspaces(accessToken, apiBase);
       setWorkspaces(workspaceResult.items);
 
       const firstWorkspace = workspaceResult.items[0];
@@ -66,11 +66,10 @@ export function useLabOpsData(userId: string, apiBase: string, options: UseLabOp
         return;
       }
 
-      const projectResult = await fetchProjects(firstWorkspace.id, userId, apiBase);
+      const projectResult = await fetchProjects(firstWorkspace.id, accessToken, apiBase);
       setProjects(projectResult.items);
 
-      const scopedProject =
-        projectResult.items.find((project) => project.id === selectedProjectId) ?? projectResult.items[0];
+      const scopedProject = projectResult.items.find((project) => project.id === selectedProjectId) ?? projectResult.items[0];
 
       if (scopedProject?.id && scopedProject.id !== selectedProjectId) {
         onProjectResolved?.(scopedProject.id);
@@ -83,12 +82,10 @@ export function useLabOpsData(userId: string, apiBase: string, options: UseLabOp
         return;
       }
 
-      const experimentResult = await fetchExperiments(firstWorkspace.id, scopedProject.id, userId, apiBase);
+      const experimentResult = await fetchExperiments(firstWorkspace.id, scopedProject.id, accessToken, apiBase);
       setExperiments(experimentResult.items);
 
-      const scopedExperiment =
-        experimentResult.items.find((experiment) => experiment.id === selectedExperimentId) ??
-        experimentResult.items[0];
+      const scopedExperiment = experimentResult.items.find((experiment) => experiment.id === selectedExperimentId) ?? experimentResult.items[0];
 
       if (scopedExperiment?.id && scopedExperiment.id !== selectedExperimentId) {
         onExperimentResolved?.(scopedExperiment.id);
@@ -100,7 +97,7 @@ export function useLabOpsData(userId: string, apiBase: string, options: UseLabOp
         return;
       }
 
-      const runResult = await fetchRuns(firstWorkspace.id, scopedExperiment.id, userId, apiBase);
+      const runResult = await fetchRuns(firstWorkspace.id, scopedExperiment.id, accessToken, apiBase);
       setRuns(runResult.items);
 
       const scopedRun = runResult.items.find((run) => run.id === selectedRunId) ?? runResult.items[0];
@@ -113,7 +110,7 @@ export function useLabOpsData(userId: string, apiBase: string, options: UseLabOp
         return;
       }
 
-      const detail = await fetchRunDetail(firstWorkspace.id, scopedRun.id, userId, apiBase);
+      const detail = await fetchRunDetail(firstWorkspace.id, scopedRun.id, accessToken, apiBase);
       setRunDetail(detail);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : 'Unknown API error');
@@ -121,6 +118,7 @@ export function useLabOpsData(userId: string, apiBase: string, options: UseLabOp
       setLoading(false);
     }
   }, [
+    accessToken,
     apiBase,
     onExperimentResolved,
     onProjectResolved,
@@ -128,7 +126,6 @@ export function useLabOpsData(userId: string, apiBase: string, options: UseLabOp
     selectedExperimentId,
     selectedProjectId,
     selectedRunId,
-    userId,
   ]);
 
   useEffect(() => {

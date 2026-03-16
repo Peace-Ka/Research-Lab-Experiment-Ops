@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
+import { JwtAuthGuard } from './common/auth/jwt-auth.guard';
 import { AuditModule } from './modules/audit/audit.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { ExperimentsModule } from './modules/experiments/experiments.module';
@@ -20,6 +22,12 @@ import { WorkspacesModule } from './modules/workspaces/workspaces.module';
     ProjectsModule,
     ExperimentsModule,
     RunsModule,
+  ],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
+    },
   ],
 })
 export class AppModule {}

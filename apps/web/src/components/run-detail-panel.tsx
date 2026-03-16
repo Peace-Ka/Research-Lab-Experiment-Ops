@@ -14,7 +14,7 @@ import {
 
 type RunDetailPanelProps = {
   workspaceId?: string;
-  userId: string;
+  accessToken: string;
   apiBase: string;
   runDetail: RunDetail | null;
   onRefresh: () => Promise<void>;
@@ -48,7 +48,7 @@ function formatBytes(sizeBytes?: string | number | null) {
   return `${raw} B`;
 }
 
-export function RunDetailPanel({ workspaceId, userId, apiBase, runDetail, onRefresh }: RunDetailPanelProps) {
+export function RunDetailPanel({ workspaceId, accessToken, apiBase, runDetail, onRefresh }: RunDetailPanelProps) {
   const [paramKey, setParamKey] = useState('');
   const [paramValue, setParamValue] = useState('');
   const [metricKey, setMetricKey] = useState('');
@@ -96,8 +96,8 @@ export function RunDetailPanel({ workspaceId, userId, apiBase, runDetail, onRefr
   async function handleStatusSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!workspaceId || !runDetail || !userId) {
-      setError('Workspace, run, and user context are required.');
+    if (!workspaceId || !runDetail || !accessToken) {
+      setError('Workspace, run, and active session are required.');
       return;
     }
 
@@ -105,7 +105,7 @@ export function RunDetailPanel({ workspaceId, userId, apiBase, runDetail, onRefr
     setError('');
 
     try {
-      await updateRunStatus(workspaceId, runDetail.id, { status: selectedStatus }, userId, apiBase);
+      await updateRunStatus(workspaceId, runDetail.id, { status: selectedStatus }, accessToken, apiBase);
       await onRefresh();
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : 'Failed to update run status.');
@@ -117,8 +117,8 @@ export function RunDetailPanel({ workspaceId, userId, apiBase, runDetail, onRefr
   async function handleParamSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!workspaceId || !runDetail || !userId) {
-      setError('Workspace, run, and user context are required.');
+    if (!workspaceId || !runDetail || !accessToken) {
+      setError('Workspace, run, and active session are required.');
       return;
     }
 
@@ -126,7 +126,7 @@ export function RunDetailPanel({ workspaceId, userId, apiBase, runDetail, onRefr
     setError('');
 
     try {
-      await addRunParam(workspaceId, runDetail.id, { key: paramKey, value: paramValue }, userId, apiBase);
+      await addRunParam(workspaceId, runDetail.id, { key: paramKey, value: paramValue }, accessToken, apiBase);
       setParamKey('');
       setParamValue('');
       await onRefresh();
@@ -140,8 +140,8 @@ export function RunDetailPanel({ workspaceId, userId, apiBase, runDetail, onRefr
   async function handleMetricSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!workspaceId || !runDetail || !userId) {
-      setError('Workspace, run, and user context are required.');
+    if (!workspaceId || !runDetail || !accessToken) {
+      setError('Workspace, run, and active session are required.');
       return;
     }
 
@@ -156,9 +156,7 @@ export function RunDetailPanel({ workspaceId, userId, apiBase, runDetail, onRefr
           key: metricKey,
           value: Number(metricValue),
           step: metricStep ? Number(metricStep) : undefined,
-        },
-        userId,
-        apiBase,
+        }, accessToken, apiBase,
       );
       setMetricKey('');
       setMetricValue('');
@@ -174,8 +172,8 @@ export function RunDetailPanel({ workspaceId, userId, apiBase, runDetail, onRefr
   async function handleArtifactSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!workspaceId || !runDetail || !userId || !artifactFile) {
-      setError('Workspace, run, user, and artifact file are required.');
+    if (!workspaceId || !runDetail || !accessToken || !artifactFile) {
+      setError('Workspace, run, active session, and artifact file are required.');
       return;
     }
 
@@ -189,9 +187,7 @@ export function RunDetailPanel({ workspaceId, userId, apiBase, runDetail, onRefr
         {
           type: artifactType,
           file: artifactFile,
-        },
-        userId,
-        apiBase,
+        }, accessToken, apiBase,
       );
       setArtifactFile(null);
       const input = document.getElementById('artifact-upload-input') as HTMLInputElement | null;
@@ -207,8 +203,8 @@ export function RunDetailPanel({ workspaceId, userId, apiBase, runDetail, onRefr
   }
 
   async function handleArtifactDownload(artifactId: string, fileName: string) {
-    if (!workspaceId || !runDetail || !userId) {
-      setError('Workspace, run, and user context are required.');
+    if (!workspaceId || !runDetail || !accessToken) {
+      setError('Workspace, run, and active session are required.');
       return;
     }
 
@@ -216,7 +212,7 @@ export function RunDetailPanel({ workspaceId, userId, apiBase, runDetail, onRefr
     setError('');
 
     try {
-      await downloadRunArtifact(workspaceId, runDetail.id, artifactId, fileName, userId, apiBase);
+      await downloadRunArtifact(workspaceId, runDetail.id, artifactId, fileName, accessToken, apiBase);
     } catch (downloadError) {
       setError(downloadError instanceof Error ? downloadError.message : 'Failed to download artifact.');
     } finally {
@@ -228,8 +224,8 @@ export function RunDetailPanel({ workspaceId, userId, apiBase, runDetail, onRefr
     state: RunChecklistStateRecord,
     nextStatus: (typeof CHECKLIST_STATUSES)[number],
   ) {
-    if (!workspaceId || !runDetail || !userId) {
-      setError('Workspace, run, and user context are required.');
+    if (!workspaceId || !runDetail || !accessToken) {
+      setError('Workspace, run, and active session are required.');
       return;
     }
 
@@ -244,9 +240,7 @@ export function RunDetailPanel({ workspaceId, userId, apiBase, runDetail, onRefr
         {
           status: nextStatus,
           note: checklistNotes[state.checklistItem.id] || undefined,
-        },
-        userId,
-        apiBase,
+        }, accessToken, apiBase,
       );
       await onRefresh();
     } catch (submitError) {
@@ -257,8 +251,8 @@ export function RunDetailPanel({ workspaceId, userId, apiBase, runDetail, onRefr
   }
 
   async function handleChecklistNoteSave(state: RunChecklistStateRecord) {
-    if (!workspaceId || !runDetail || !userId) {
-      setError('Workspace, run, and user context are required.');
+    if (!workspaceId || !runDetail || !accessToken) {
+      setError('Workspace, run, and active session are required.');
       return;
     }
 
@@ -273,9 +267,7 @@ export function RunDetailPanel({ workspaceId, userId, apiBase, runDetail, onRefr
         {
           status: state.status as (typeof CHECKLIST_STATUSES)[number],
           note: checklistNotes[state.checklistItem.id] || undefined,
-        },
-        userId,
-        apiBase,
+        }, accessToken, apiBase,
       );
       await onRefresh();
     } catch (submitError) {
@@ -498,3 +490,4 @@ export function RunDetailPanel({ workspaceId, userId, apiBase, runDetail, onRefr
     </section>
   );
 }
+

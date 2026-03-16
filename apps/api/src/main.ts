@@ -7,7 +7,7 @@ async function bootstrap(): Promise<void> {
   app.enableCors({
     origin: ['http://localhost:3000'],
     methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'x-user-id'],
+    allowedHeaders: ['Content-Type', 'x-user-id', 'Authorization'],
     credentials: false,
   });
   app.setGlobalPrefix('v1');

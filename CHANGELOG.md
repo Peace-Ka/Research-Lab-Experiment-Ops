@@ -34,3 +34,6 @@
 - Replaced artifact metadata-only registration with backend-managed file upload and download support.
 - Seeded real local demo artifact files so evidence downloads work in the local walkthrough.
 - Fixed artifact downloads so they use authenticated client-side fetch instead of unauthenticated direct links.
+- Replaced the temporary `x-user-id` transport with signed bearer-token auth across the API and frontend shell.
+- Added a global auth guard with public-route exceptions for health and login/register endpoints.
+- Updated the frontend session model so live API calls, artifact downloads, and workflow actions use bearer tokens.

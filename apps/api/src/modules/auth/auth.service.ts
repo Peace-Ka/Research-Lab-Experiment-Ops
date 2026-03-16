@@ -1,12 +1,16 @@
 import { BadRequestException, ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { randomBytes, scryptSync, timingSafeEqual } from 'crypto';
+import { TokenService } from '../../common/auth/token.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 
 @Injectable()
 export class AuthService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly tokenService: TokenService,
+  ) {}
 
   async register(payload: RegisterDto) {
     const normalizedEmail = payload.email.trim().toLowerCase();
@@ -30,12 +34,16 @@ export class AuthService {
       },
     });
 
+    const accessToken = this.tokenService.issueToken(user);
+
     return {
       message: 'Registration successful',
       user,
+      accessToken,
       authContext: {
         userId: user.id,
-        transport: 'x-user-id',
+        accessToken,
+        transport: 'bearer',
       },
     };
   }
@@ -48,23 +56,28 @@ export class AuthService {
       throw new UnauthorizedException('Invalid email or password');
     }
 
+    const publicUser = {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+    };
+    const accessToken = this.tokenService.issueToken(publicUser);
+
     return {
       message: 'Login successful',
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-      },
+      user: publicUser,
+      accessToken,
       authContext: {
         userId: user.id,
-        transport: 'x-user-id',
+        accessToken,
+        transport: 'bearer',
       },
     };
   }
 
   async me(userId: string) {
     if (!userId) {
-      throw new BadRequestException('Missing x-user-id header');
+      throw new BadRequestException('Missing authenticated user');
     }
 
     const user = await this.prisma.user.findUnique({

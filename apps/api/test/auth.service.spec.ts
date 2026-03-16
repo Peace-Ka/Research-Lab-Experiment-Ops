@@ -8,11 +8,15 @@ describe('AuthService', () => {
       create: jest.fn(),
     },
   };
+  const tokenService = {
+    issueToken: jest.fn().mockReturnValue('jwt-token'),
+  };
 
-  const service = new AuthService(prisma as never);
+  const service = new AuthService(prisma as never, tokenService as never);
 
   beforeEach(() => {
     jest.clearAllMocks();
+    tokenService.issueToken.mockReturnValue('jwt-token');
   });
 
   it('registers a persisted user with a hashed password', async () => {
@@ -39,8 +43,13 @@ describe('AuthService', () => {
         }),
       }),
     );
+    expect(tokenService.issueToken).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'user_1', email: 'peace@example.com', name: 'Peace' }),
+    );
     expect(result.user.id).toBe('user_1');
     expect(result.authContext.userId).toBe('user_1');
+    expect(result.authContext.transport).toBe('bearer');
+    expect(result.accessToken).toBe('jwt-token');
   });
 
   it('rejects duplicate registration', async () => {
@@ -64,7 +73,7 @@ describe('AuthService', () => {
       createdAt: new Date('2026-03-12T00:00:00.000Z'),
     }));
 
-    const registerResult = await service.register({
+    await service.register({
       email: 'researcher@example.com',
       name: 'Researcher',
       password: 'password123',
@@ -84,8 +93,8 @@ describe('AuthService', () => {
     });
 
     expect(result.user.id).toBe('user_2');
-    expect(result.authContext.transport).toBe('x-user-id');
-    expect(registerResult.authContext.transport).toBe('x-user-id');
+    expect(result.authContext.transport).toBe('bearer');
+    expect(result.accessToken).toBe('jwt-token');
   });
 
   it('rejects an invalid login', async () => {

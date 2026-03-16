@@ -4,8 +4,10 @@ export type AuthResponse = {
     email: string;
     name: string;
   };
+  accessToken: string;
   authContext: {
     userId: string;
+    accessToken: string;
     transport: string;
   };
   message: string;
@@ -102,11 +104,11 @@ function resolveApiBase(apiBase?: string) {
   return apiBase ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3001/v1';
 }
 
-async function request<T>(path: string, init?: RequestInit, userId?: string, apiBase?: string): Promise<T> {
+async function request<T>(path: string, init?: RequestInit, accessToken?: string, apiBase?: string): Promise<T> {
   const headers = new Headers(init?.headers ?? {});
 
-  if (userId) {
-    headers.set('x-user-id', userId);
+  if (accessToken) {
+    headers.set('Authorization', `Bearer ${accessToken}`);
   }
 
   if (init?.body && !(init.body instanceof FormData) && !headers.has('Content-Type')) {
@@ -132,7 +134,7 @@ export async function downloadRunArtifact(
   runId: string,
   artifactId: string,
   fileName: string,
-  userId: string,
+  accessToken: string,
   apiBase?: string,
 ) {
   const response = await fetch(
@@ -140,7 +142,7 @@ export async function downloadRunArtifact(
     {
       method: 'GET',
       headers: {
-        'x-user-id': userId,
+        Authorization: `Bearer ${accessToken}`,
       },
       cache: 'no-store',
     },
@@ -186,15 +188,31 @@ export async function loginUser(payload: { email: string; password: string }, ap
   );
 }
 
-export async function fetchWorkspaces(userId: string, apiBase?: string) {
-  return request<{ items: WorkspaceSummary[]; total: number }>('/workspaces', undefined, userId, apiBase);
+export async function fetchWorkspaces(accessToken: string, apiBase?: string) {
+  return request<{ items: WorkspaceSummary[]; total: number }>('/workspaces', undefined, accessToken, apiBase);
 }
 
-export async function fetchProjects(workspaceId: string, userId: string, apiBase?: string) {
+export async function createWorkspace(
+  payload: { name: string; slug: string; description?: string },
+  accessToken: string,
+  apiBase?: string,
+) {
+  return request<WorkspaceSummary>(
+    '/workspaces',
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    },
+    accessToken,
+    apiBase,
+  );
+}
+
+export async function fetchProjects(workspaceId: string, accessToken: string, apiBase?: string) {
   return request<{ workspaceId: string; items: ProjectSummary[]; total: number }>(
     `/workspaces/${workspaceId}/projects`,
     undefined,
-    userId,
+    accessToken,
     apiBase,
   );
 }
@@ -202,7 +220,7 @@ export async function fetchProjects(workspaceId: string, userId: string, apiBase
 export async function createProject(
   workspaceId: string,
   payload: { name: string; description?: string },
-  userId: string,
+  accessToken: string,
   apiBase?: string,
 ) {
   return request<ProjectSummary>(
@@ -211,16 +229,16 @@ export async function createProject(
       method: 'POST',
       body: JSON.stringify(payload),
     },
-    userId,
+    accessToken,
     apiBase,
   );
 }
 
-export async function fetchExperiments(workspaceId: string, projectId: string, userId: string, apiBase?: string) {
+export async function fetchExperiments(workspaceId: string, projectId: string, accessToken: string, apiBase?: string) {
   return request<{ workspaceId: string; projectId: string; items: ExperimentSummary[]; total: number }>(
     `/workspaces/${workspaceId}/projects/${projectId}/experiments`,
     undefined,
-    userId,
+    accessToken,
     apiBase,
   );
 }
@@ -229,7 +247,7 @@ export async function createExperiment(
   workspaceId: string,
   projectId: string,
   payload: { title: string; hypothesis?: string },
-  userId: string,
+  accessToken: string,
   apiBase?: string,
 ) {
   return request<ExperimentSummary>(
@@ -238,16 +256,16 @@ export async function createExperiment(
       method: 'POST',
       body: JSON.stringify(payload),
     },
-    userId,
+    accessToken,
     apiBase,
   );
 }
 
-export async function fetchRuns(workspaceId: string, experimentId: string, userId: string, apiBase?: string) {
+export async function fetchRuns(workspaceId: string, experimentId: string, accessToken: string, apiBase?: string) {
   return request<{ workspaceId: string; experimentId: string; items: RunSummary[]; total: number }>(
     `/workspaces/${workspaceId}/experiments/${experimentId}/runs`,
     undefined,
-    userId,
+    accessToken,
     apiBase,
   );
 }
@@ -260,7 +278,7 @@ export async function createRun(
     randomSeed?: number;
     notes?: string;
   },
-  userId: string,
+  accessToken: string,
   apiBase?: string,
 ) {
   return request<RunSummary>(
@@ -269,20 +287,20 @@ export async function createRun(
       method: 'POST',
       body: JSON.stringify(payload),
     },
-    userId,
+    accessToken,
     apiBase,
   );
 }
 
-export async function fetchRunDetail(workspaceId: string, runId: string, userId: string, apiBase?: string) {
-  return request<RunDetail>(`/workspaces/${workspaceId}/runs/${runId}`, undefined, userId, apiBase);
+export async function fetchRunDetail(workspaceId: string, runId: string, accessToken: string, apiBase?: string) {
+  return request<RunDetail>(`/workspaces/${workspaceId}/runs/${runId}`, undefined, accessToken, apiBase);
 }
 
 export async function updateRunStatus(
   workspaceId: string,
   runId: string,
   payload: { status: 'queued' | 'running' | 'completed' | 'failed' | 'canceled'; notes?: string },
-  userId: string,
+  accessToken: string,
   apiBase?: string,
 ) {
   return request<RunSummary>(
@@ -291,7 +309,7 @@ export async function updateRunStatus(
       method: 'PATCH',
       body: JSON.stringify(payload),
     },
-    userId,
+    accessToken,
     apiBase,
   );
 }
@@ -300,7 +318,7 @@ export async function addRunParam(
   workspaceId: string,
   runId: string,
   payload: { key: string; value: string },
-  userId: string,
+  accessToken: string,
   apiBase?: string,
 ) {
   return request<RunParamRecord>(
@@ -309,7 +327,7 @@ export async function addRunParam(
       method: 'POST',
       body: JSON.stringify(payload),
     },
-    userId,
+    accessToken,
     apiBase,
   );
 }
@@ -318,7 +336,7 @@ export async function addRunMetric(
   workspaceId: string,
   runId: string,
   payload: { key: string; value: number; step?: number },
-  userId: string,
+  accessToken: string,
   apiBase?: string,
 ) {
   return request<RunMetricRecord>(
@@ -327,7 +345,7 @@ export async function addRunMetric(
       method: 'POST',
       body: JSON.stringify(payload),
     },
-    userId,
+    accessToken,
     apiBase,
   );
 }
@@ -339,7 +357,7 @@ export async function addRunArtifact(
     type: 'model' | 'plot' | 'log' | 'checkpoint' | 'dataset_snapshot' | 'other';
     file: File;
   },
-  userId: string,
+  accessToken: string,
   apiBase?: string,
 ) {
   const formData = new FormData();
@@ -352,7 +370,7 @@ export async function addRunArtifact(
       method: 'POST',
       body: formData,
     },
-    userId,
+    accessToken,
     apiBase,
   );
 }
@@ -362,7 +380,7 @@ export async function updateRunChecklistState(
   runId: string,
   checklistItemId: string,
   payload: { status: 'pending' | 'passed' | 'failed' | 'waived'; note?: string },
-  userId: string,
+  accessToken: string,
   apiBase?: string,
 ) {
   return request<RunChecklistStateRecord>(
@@ -371,7 +389,7 @@ export async function updateRunChecklistState(
       method: 'PATCH',
       body: JSON.stringify(payload),
     },
-    userId,
+    accessToken,
     apiBase,
   );
 }
