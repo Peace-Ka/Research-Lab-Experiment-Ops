@@ -1,16 +1,9 @@
-import { scryptSync } from 'crypto';
 import { mkdir, rm, writeFile } from 'fs/promises';
 import { dirname, join } from 'path';
 import { ArtifactType, ChecklistStatus, PrismaClient, RunStatus, WorkspaceRole } from '@prisma/client';
 
 const prisma = new PrismaClient();
 const artifactRoot = join(process.cwd(), 'storage', 'artifacts');
-
-function hashPassword(password: string): string {
-  const salt = 'labops-demo-salt';
-  const hash = scryptSync(password, salt, 64).toString('hex');
-  return `${salt}:${hash}`;
-}
 
 async function resetArtifactStorage() {
   await rm(artifactRoot, { recursive: true, force: true });
@@ -39,9 +32,10 @@ async function seed(): Promise<void> {
 
   const user = await prisma.user.create({
     data: {
-      email: 'demo@labops.dev',
-      name: 'Demo Researcher',
-      passwordHash: hashPassword('demo12345'),
+      externalAuthId: 'seed-demo-user',
+      email: 'seed-demo@labops.dev',
+      name: 'Seed Demo Researcher',
+      passwordHash: null,
     },
   });
 
@@ -270,4 +264,5 @@ void seed()
   .finally(async () => {
     await prisma.$disconnect();
   });
+
 

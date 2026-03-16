@@ -9,8 +9,7 @@ import { useLabOpsSession } from '../../lib/use-labops-session';
 export default function ProjectsPage() {
   const {
     userId,
-    accessToken,
-    clearAuth,
+    getAccessToken,
     apiBase,
     setApiBase,
     selectedProjectId,
@@ -18,7 +17,7 @@ export default function ProjectsPage() {
     selectedExperimentId,
     setSelectedExperimentId,
   } = useLabOpsSession();
-  const { workspaces, projects, loading, error, refresh } = useLabOpsData(accessToken, apiBase, {
+  const { workspaces, projects, loading, error, refresh } = useLabOpsData(getAccessToken, apiBase, {
     selectedProjectId,
     selectedExperimentId,
     onProjectResolved: setSelectedProjectId,
@@ -31,8 +30,6 @@ export default function ProjectsPage() {
       title="Projects"
       subtitle="Select a project first. Everything on the experiments page will scope to that selection."
       userId={userId}
-      accessToken={accessToken}
-      clearAuth={clearAuth}
       apiBase={apiBase}
       setApiBase={setApiBase}
     >
@@ -44,7 +41,7 @@ export default function ProjectsPage() {
             <p className="muted">
               {loading
                 ? 'Refreshing project inventory...'
-                : 'Projects are loaded live from the backend using the current bearer token.'}
+                : 'Projects are loaded live from the backend using the current Clerk session.'}
             </p>
             {workspace?.description ? <div className="callout">{workspace.description}</div> : null}
             {error ? <p className="error-text">{error}</p> : null}
@@ -64,8 +61,8 @@ export default function ProjectsPage() {
             ]}
             submitLabel="Create project"
             onSubmit={async (values) => {
-              if (!workspace || !accessToken) {
-                throw new Error('A workspace and active session are required before creating a project.');
+              if (!workspace) {
+                throw new Error('Create a workspace first before creating a project.');
               }
 
               const createdProject = await createProject(
@@ -74,7 +71,7 @@ export default function ProjectsPage() {
                   name: values.name,
                   description: values.description,
                 },
-                accessToken,
+                getAccessToken,
                 apiBase,
               );
               setSelectedProjectId(createdProject.id);

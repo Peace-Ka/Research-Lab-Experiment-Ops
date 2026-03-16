@@ -54,9 +54,10 @@ enum ReviewStatus {
 
 model User {
   id             String                @id @default(cuid())
+  externalAuthId String?               @unique
   email          String                @unique
   name           String
-  passwordHash   String
+  passwordHash   String?
   mfaEnabled     Boolean               @default(false)
   createdAt      DateTime              @default(now())
   updatedAt      DateTime              @updatedAt

@@ -406,3 +406,17 @@ input[type="file"] {
   stroke: rgba(8, 17, 20, 0.9);
   stroke-width: 1.5;
 }
+
+.auth-screen {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 2rem;
+}
+
+.clerk-user-row {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  margin-top: 0.5rem;
+}

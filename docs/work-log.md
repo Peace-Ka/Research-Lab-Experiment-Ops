@@ -40,5 +40,9 @@
 - Fixed artifact downloads by replacing unauthenticated anchor links with authenticated client-side fetch/download behavior.
 - Replaced the temporary `x-user-id` web shell flow with signed bearer-token authentication and a global auth guard.
 - Added `@Public()` route handling for health/register/login so the global guard does not block bootstrap flows.
-- Updated the web session layer to persist both `userId` and `accessToken`, then migrated API calls, downloads, and run workflow actions to use bearer auth.
-- Added `JWT_SECRET` to the environment template and ignored generated `*.tsbuildinfo` artifacts.
+- Migrated the web session layer away from local auth storage so API calls, downloads, and workflow actions now use Clerk session tokens.
+- Added Clerk environment variables to the template and ignored generated `*.tsbuildinfo` artifacts.
+
+- Replaced the custom JWT/login panel with Clerk-managed auth across the web app and backend guard.
+- Added local user mapping via `externalAuthId` so Clerk identities can own workspaces, projects, experiments, and runs in the local database.
+- Added protected Clerk sign-in/sign-up routes, Next.js middleware, and overview-page workspace onboarding so a fresh authenticated user can bootstrap the app.

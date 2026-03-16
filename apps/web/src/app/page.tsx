@@ -2,18 +2,25 @@
 
 import Link from 'next/link';
 import { AppShell } from '../components/app-shell';
-import { AuthPanel } from '../components/auth-panel';
+import { CreateRecordPanel } from '../components/create-record-panel';
+import { createWorkspace } from '../lib/api';
 import { useLabOpsData } from '../lib/use-labops-data';
 import { useLabOpsSession } from '../lib/use-labops-session';
+
+function slugifyWorkspaceName(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 48);
+}
 
 export default function HomePage() {
   const {
     ready,
     userId,
-    setUserId,
-    accessToken,
-    setAccessToken,
-    clearAuth,
+    getAccessToken,
     apiBase,
     setApiBase,
     selectedProjectId,
@@ -21,7 +28,7 @@ export default function HomePage() {
     selectedExperimentId,
     setSelectedExperimentId,
   } = useLabOpsSession();
-  const { workspaces, projects, experiments, runs, runDetail, loading, error } = useLabOpsData(accessToken, apiBase, {
+  const { workspaces, projects, experiments, runs, runDetail, loading, error, refresh } = useLabOpsData(getAccessToken, apiBase, {
     selectedProjectId,
     selectedExperimentId,
     onProjectResolved: setSelectedProjectId,
@@ -38,8 +45,6 @@ export default function HomePage() {
       title="Lab command center"
       subtitle="A live view across the selected workspace, project, experiment, and its recent run history."
       userId={userId}
-      accessToken={accessToken}
-      clearAuth={clearAuth}
       apiBase={apiBase}
       setApiBase={setApiBase}
     >
@@ -68,11 +73,43 @@ export default function HomePage() {
         </div>
 
         <div className="two-column">
-          <AuthPanel
-            apiBase={apiBase}
-            onAuthenticated={({ userId: nextUserId, accessToken: nextAccessToken }) => {
-              setUserId(nextUserId);
-              setAccessToken(nextAccessToken);
+          <CreateRecordPanel
+            title="Workspace"
+            subtitle="Start by creating your lab workspace. This replaces the old demo-login onboarding flow."
+            fields={[
+              { name: 'name', label: 'Name', placeholder: 'Graph Learning Lab', required: true },
+              {
+                name: 'slug',
+                label: 'Slug',
+                placeholder: 'graph-learning-lab',
+              },
+              {
+                name: 'description',
+                label: 'Description',
+                placeholder: 'What research area does this workspace own?',
+                multiline: true,
+              },
+            ]}
+            submitLabel="Create workspace"
+            onSubmit={async (values) => {
+              const slug = values.slug?.trim() || slugifyWorkspaceName(values.name);
+
+              if (!slug) {
+                throw new Error('A workspace slug is required.');
+              }
+
+              await createWorkspace(
+                {
+                  name: values.name,
+                  slug,
+                  description: values.description,
+                },
+                getAccessToken,
+                apiBase,
+              );
+              setSelectedProjectId('');
+              setSelectedExperimentId('');
+              await refresh();
             }}
           />
 
@@ -85,12 +122,12 @@ export default function HomePage() {
             </div>
             <div className="list">
               <div className="list-item">
-                <strong>{ready ? 'Frontend session ready' : 'Initializing local session'}</strong>
-                <span className="muted">The shell stores the bearer token, API base, selected project, and selected experiment in local storage.</span>
+                <strong>{ready ? 'Frontend session ready' : 'Initializing Clerk session'}</strong>
+                <span className="muted">The shell stores API base and navigation context locally. Authentication comes from Clerk.</span>
               </div>
               <div className="list-item">
                 <strong>{loading ? 'Refreshing live backend data' : 'Backend sync idle'}</strong>
-                <span className="muted">The dashboard now follows the selected project and experiment context instead of using arbitrary first records.</span>
+                <span className="muted">The dashboard follows the selected project and experiment context instead of using arbitrary first records.</span>
               </div>
               <div className="list-item">
                 <strong>Run health snapshot</strong>
@@ -106,7 +143,7 @@ export default function HomePage() {
           <section className="panel">
             <p className="eyebrow">Workspace</p>
             <h3>{workspaces[0]?.name ?? 'No workspace yet'}</h3>
-            <p className="muted">{workspaces[0]?.description ?? 'Register, create a workspace, and the dashboard will start filling with live data.'}</p>
+            <p className="muted">{workspaces[0]?.description ?? 'Create your first workspace to start organizing projects and experiments.'}</p>
             {workspaces[0]?.membership ? (
               <div className="callout">Role: {workspaces[0].membership.role} | Status: {workspaces[0].membership.status}</div>
             ) : null}
@@ -115,7 +152,7 @@ export default function HomePage() {
           <section className="panel">
             <p className="eyebrow">Selected project</p>
             <h3>{selectedProject?.name ?? 'No project selected'}</h3>
-            <p className="muted">{selectedProject?.description ?? 'Choose a project on the Projects page to scope experiments correctly.'}</p>
+            <p className="muted">{selectedProject?.description ?? 'Choose or create a project on the Projects page to scope experiments correctly.'}</p>
             <Link className="secondary-button" href="/projects">Manage projects</Link>
           </section>
 

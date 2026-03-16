@@ -34,6 +34,10 @@
 - Replaced artifact metadata-only registration with backend-managed file upload and download support.
 - Seeded real local demo artifact files so evidence downloads work in the local walkthrough.
 - Fixed artifact downloads so they use authenticated client-side fetch instead of unauthenticated direct links.
-- Replaced the temporary `x-user-id` transport with signed bearer-token auth across the API and frontend shell.
-- Added a global auth guard with public-route exceptions for health and login/register endpoints.
-- Updated the frontend session model so live API calls, artifact downloads, and workflow actions use bearer tokens.
+- Replaced the temporary custom auth flow with Clerk-managed authentication across the API and frontend shell.
+- Added a global auth guard with public-route exceptions for health and Clerk sign-in/up surfaces.
+- Updated the frontend session model so live API calls, artifact downloads, and workflow actions use Clerk session tokens.
+
+- Replaced the custom auth flow with Clerk-managed sign-in/sign-up and backend token verification.
+- Added local user mapping via `externalAuthId` and a Prisma migration for Clerk-backed identities.
+- Added Clerk-protected app routes plus overview-page workspace creation so new authenticated users can bootstrap the system without seeded login credentials.

@@ -183,3 +183,16 @@ pm run web:build`n- Result: The experiments page now lets the user choose a spec
   - `npm.cmd run web:build`
 - Result: Auth now issues and verifies signed bearer tokens, protected routes accept `Authorization: Bearer ...`, the frontend persists the access token in session storage, and all API/frontend validations pass.
 - Follow-up: Restart the API/web dev servers, sign in again to refresh local session state, then verify project/experiment/run flows under JWT auth.
+
+## 2026-03-16 01:35 CST
+- Summary: Replaced the custom auth flow with Clerk-managed authentication across the Next.js frontend and Nest API.
+- Files changed: `apps/web/src/app/*`, `apps/web/src/components/app-shell.tsx`, `apps/web/src/lib/*`, `apps/web/src/middleware.ts`, `apps/api/src/modules/auth/*`, `apps/api/src/common/auth/*`, `apps/api/src/modules/workspaces/workspaces.service.ts`, `prisma/schema.prisma`, `prisma/migrations/20260316_add_clerk_user_mapping/migration.sql`, `prisma/seed.ts`, `.env.example`, `README.md`
+- Commands run:
+  - `npm.cmd install @clerk/nextjs --workspace @labops/web`
+  - `npm.cmd install @clerk/backend --workspace @labops/api`
+  - `npm.cmd run build`
+  - `npm.cmd run test`
+  - `npm.cmd run test:integration`
+  - `npm.cmd run web:build`
+- Result: The frontend now uses Clerk provider/middleware/sign-in/sign-up routes, the backend verifies Clerk-issued tokens and maps them to local users via `externalAuthId`, and new users can create their first workspace directly from the overview page.
+- Follow-up: Set real Clerk keys in `.env`, restart both dev servers, sign in through `/sign-in`, then verify workspace/project/experiment flows with a real Clerk user.

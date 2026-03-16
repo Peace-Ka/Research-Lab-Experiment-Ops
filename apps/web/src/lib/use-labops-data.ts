@@ -6,6 +6,7 @@ import {
   ProjectSummary,
   RunDetail,
   RunSummary,
+  TokenResolver,
   WorkspaceSummary,
   fetchExperiments,
   fetchProjects,
@@ -23,7 +24,7 @@ type UseLabOpsDataOptions = {
   onRunResolved?: (runId: string) => void;
 };
 
-export function useLabOpsData(accessToken: string, apiBase: string, options: UseLabOpsDataOptions = {}) {
+export function useLabOpsData(tokenResolver: TokenResolver, apiBase: string, options: UseLabOpsDataOptions = {}) {
   const [workspaces, setWorkspaces] = useState<WorkspaceSummary[]>([]);
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [experiments, setExperiments] = useState<ExperimentSummary[]>([]);
@@ -40,7 +41,9 @@ export function useLabOpsData(accessToken: string, apiBase: string, options: Use
   const onRunResolved = options.onRunResolved;
 
   const refresh = useCallback(async () => {
-    if (!accessToken) {
+    const token = await tokenResolver();
+
+    if (!token) {
       setWorkspaces([]);
       setProjects([]);
       setExperiments([]);
@@ -54,7 +57,7 @@ export function useLabOpsData(accessToken: string, apiBase: string, options: Use
     setError(null);
 
     try {
-      const workspaceResult = await fetchWorkspaces(accessToken, apiBase);
+      const workspaceResult = await fetchWorkspaces(tokenResolver, apiBase);
       setWorkspaces(workspaceResult.items);
 
       const firstWorkspace = workspaceResult.items[0];
@@ -66,7 +69,7 @@ export function useLabOpsData(accessToken: string, apiBase: string, options: Use
         return;
       }
 
-      const projectResult = await fetchProjects(firstWorkspace.id, accessToken, apiBase);
+      const projectResult = await fetchProjects(firstWorkspace.id, tokenResolver, apiBase);
       setProjects(projectResult.items);
 
       const scopedProject = projectResult.items.find((project) => project.id === selectedProjectId) ?? projectResult.items[0];
@@ -82,7 +85,7 @@ export function useLabOpsData(accessToken: string, apiBase: string, options: Use
         return;
       }
 
-      const experimentResult = await fetchExperiments(firstWorkspace.id, scopedProject.id, accessToken, apiBase);
+      const experimentResult = await fetchExperiments(firstWorkspace.id, scopedProject.id, tokenResolver, apiBase);
       setExperiments(experimentResult.items);
 
       const scopedExperiment = experimentResult.items.find((experiment) => experiment.id === selectedExperimentId) ?? experimentResult.items[0];
@@ -97,7 +100,7 @@ export function useLabOpsData(accessToken: string, apiBase: string, options: Use
         return;
       }
 
-      const runResult = await fetchRuns(firstWorkspace.id, scopedExperiment.id, accessToken, apiBase);
+      const runResult = await fetchRuns(firstWorkspace.id, scopedExperiment.id, tokenResolver, apiBase);
       setRuns(runResult.items);
 
       const scopedRun = runResult.items.find((run) => run.id === selectedRunId) ?? runResult.items[0];
@@ -110,7 +113,7 @@ export function useLabOpsData(accessToken: string, apiBase: string, options: Use
         return;
       }
 
-      const detail = await fetchRunDetail(firstWorkspace.id, scopedRun.id, accessToken, apiBase);
+      const detail = await fetchRunDetail(firstWorkspace.id, scopedRun.id, tokenResolver, apiBase);
       setRunDetail(detail);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : 'Unknown API error');
@@ -118,7 +121,6 @@ export function useLabOpsData(accessToken: string, apiBase: string, options: Use
       setLoading(false);
     }
   }, [
-    accessToken,
     apiBase,
     onExperimentResolved,
     onProjectResolved,
@@ -126,6 +128,7 @@ export function useLabOpsData(accessToken: string, apiBase: string, options: Use
     selectedExperimentId,
     selectedProjectId,
     selectedRunId,
+    tokenResolver,
   ]);
 
   useEffect(() => {
