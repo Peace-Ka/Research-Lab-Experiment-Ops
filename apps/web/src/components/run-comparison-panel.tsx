@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { RunDetail, RunSummary, TokenResolver, fetchRunDetail } from '../lib/api';
+import { assessReproducibility } from '../lib/reproducibility';
 
 type RunComparisonPanelProps = {
   workspaceId?: string;
@@ -34,16 +35,6 @@ function buildParamMap(run: RunDetail): ParamMap {
     acc[param.key] = param.value;
     return acc;
   }, {});
-}
-
-function checklistScore(run: RunDetail) {
-  const total = run.checklistStates.length;
-  const passed = run.checklistStates.filter((state) => state.status === 'passed').length;
-  const blocking = run.checklistStates.filter(
-    (state) => state.checklistItem.isRequired && state.status !== 'passed' && state.status !== 'waived',
-  ).length;
-
-  return { total, passed, blocking };
 }
 
 export function RunComparisonPanel({
@@ -144,10 +135,10 @@ export function RunComparisonPanel({
       ) : (
         <div className="comparison-grid">
           {details.map((run) => {
-            const score = checklistScore(run);
             const runSummary = runLookup.get(run.id);
             const params = buildParamMap(run);
             const metrics = buildMetricMap(run);
+            const reproducibility = assessReproducibility(run);
 
             return (
               <article key={run.id} className="comparison-card">
@@ -165,12 +156,18 @@ export function RunComparisonPanel({
                   <div className="inline-stat"><span>Status</span><span>{run.status}</span></div>
                   <div className="inline-stat"><span>Seed</span><span>{run.randomSeed ?? 'n/a'}</span></div>
                   <div className="inline-stat"><span>Artifacts</span><span>{run.artifacts.length}</span></div>
-                  <div className="inline-stat"><span>Checks</span><span>{score.passed}/{score.total}</span></div>
-                  <div className="inline-stat"><span>Blocking</span><span>{score.blocking}</span></div>
+                  <div className="inline-stat"><span>Score</span><span>{reproducibility.score}/100</span></div>
+                  <div className="inline-stat"><span>Checks</span><span>{reproducibility.passedChecks}/{reproducibility.totalChecks}</span></div>
+                  <div className="inline-stat"><span>Blocking</span><span>{reproducibility.blockingChecks}</span></div>
                   <div className="inline-stat">
                     <span>Created</span>
                     <span>{runSummary ? new Date(runSummary.createdAt).toLocaleDateString() : 'n/a'}</span>
                   </div>
+                </div>
+
+                <div className={`callout comparison-callout ${reproducibility.tone}`}>
+                  <strong>{reproducibility.label}</strong>
+                  <span>{reproducibility.explanation}</span>
                 </div>
 
                 <div className="comparison-section">
@@ -182,7 +179,7 @@ export function RunComparisonPanel({
                       paramKeys.map((key) => (
                         <div key={key} className="comparison-row">
                           <span>{key}</span>
-                          <strong>{params[key] ?? '—'}</strong>
+                          <strong>{params[key] ?? '-'}</strong>
                         </div>
                       ))
                     )}
@@ -201,7 +198,7 @@ export function RunComparisonPanel({
                         return (
                           <div key={key} className="comparison-row">
                             <span>{key}</span>
-                            <strong>{metric ? `${metric.value}${metric.step != null ? ` @ step ${metric.step}` : ''}` : '—'}</strong>
+                            <strong>{metric ? `${metric.value}${metric.step != null ? ` @ step ${metric.step}` : ''}` : '-'}</strong>
                           </div>
                         );
                       })
@@ -210,15 +207,15 @@ export function RunComparisonPanel({
                 </div>
 
                 <div className="comparison-section">
-                  <p className="eyebrow">Reproducibility notes</p>
+                  <p className="eyebrow">Top blockers</p>
                   <div className="comparison-table">
-                    {run.checklistStates.length === 0 ? (
-                      <span className="muted">No checklist items configured.</span>
+                    {reproducibility.blockers.length === 0 ? (
+                      <span className="muted">Nothing major is blocking this run.</span>
                     ) : (
-                      run.checklistStates.map((state) => (
-                        <div key={state.id} className="comparison-row checklist-row">
-                          <span>{state.checklistItem.label}</span>
-                          <strong>{state.status}</strong>
+                      reproducibility.blockers.map((blocker) => (
+                        <div key={blocker} className="comparison-row checklist-row">
+                          <span>{blocker}</span>
+                          <strong>Fix next</strong>
                         </div>
                       ))
                     )}

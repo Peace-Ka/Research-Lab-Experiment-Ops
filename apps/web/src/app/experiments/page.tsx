@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { AppShell } from '../../components/app-shell';
 import { CreateRecordPanel } from '../../components/create-record-panel';
 import { MetricVisualizationPanel } from '../../components/metric-visualization-panel';
+import { ReproducibilityDashboardPanel } from '../../components/reproducibility-dashboard-panel';
 import { RunComparisonPanel } from '../../components/run-comparison-panel';
 import { RunDetailPanel } from '../../components/run-detail-panel';
 import { createExperiment, createRun } from '../../lib/api';
@@ -240,6 +241,13 @@ export default function ExperimentsPage() {
             </div>
           </section>
         </div>
+
+        <ReproducibilityDashboardPanel
+          workspaceId={workspace?.id}
+          tokenResolver={getAccessToken}
+          apiBase={apiBase}
+          runs={runs}
+        />
 
         <MetricVisualizationPanel runs={runs} runDetail={runDetail} />
 
