@@ -587,3 +587,58 @@ input[type="file"] {
   color: var(--text);
   font-size: 0.85rem;
 }
+
+.reproducibility-metrics-grid {
+  margin-top: 1rem;
+}
+
+.status-card.ready strong,
+.reproducibility-summary.success strong,
+.comparison-callout.success strong {
+  color: #9ce8b3;
+}
+
+.status-card.almost-ready strong,
+.comparison-callout.warning strong {
+  color: #f1d28f;
+}
+
+.status-card.blocked strong,
+.reproducibility-summary.danger strong,
+.comparison-callout.danger strong {
+  color: #ff9f8a;
+}
+
+.score-card strong {
+  color: #f6f6ef;
+}
+
+.inline-stat-group {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.75rem;
+  margin: 1rem 0;
+}
+
+.reproducibility-summary {
+  border-left: 3px solid rgba(255, 255, 255, 0.14);
+}
+
+.reproducibility-summary.success,
+.comparison-callout.success {
+  border-left-color: rgba(156, 232, 179, 0.7);
+}
+
+.reproducibility-summary.warning,
+.comparison-callout.warning {
+  border-left-color: rgba(241, 210, 143, 0.7);
+}
+
+.reproducibility-summary.danger,
+.comparison-callout.danger {
+  border-left-color: rgba(255, 159, 138, 0.7);
+}
+
+.comparison-callout {
+  margin-top: 1rem;
+}

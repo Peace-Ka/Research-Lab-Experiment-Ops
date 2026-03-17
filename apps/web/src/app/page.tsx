@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { AppShell } from '../components/app-shell';
 import { CreateRecordPanel } from '../components/create-record-panel';
 import { createWorkspace } from '../lib/api';
+import { assessReproducibility } from '../lib/reproducibility';
 import { useLabOpsData } from '../lib/use-labops-data';
 import { useLabOpsSession } from '../lib/use-labops-session';
 
@@ -14,38 +15,6 @@ function slugifyWorkspaceName(value: string) {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .slice(0, 48);
-}
-
-function getOverviewReproStatus(runDetail: { codeRef?: string | null; randomSeed?: number | null; metrics: unknown[]; artifacts: unknown[]; checklistStates: Array<{ status: string; checklistItem: { isRequired: boolean } }> } | null) {
-  if (!runDetail) {
-    return {
-      label: 'No run selected',
-      explanation: 'Pick an experiment run to see whether it is reproducible enough for another researcher to repeat.',
-    };
-  }
-
-  const blocking = runDetail.checklistStates.filter(
-    (state) => state.checklistItem.isRequired && state.status !== 'passed' && state.status !== 'waived',
-  ).length;
-
-  if (blocking > 0 || !runDetail.codeRef || runDetail.randomSeed == null) {
-    return {
-      label: 'Blocked',
-      explanation: 'This run still misses required setup details like code reference, random seed, or checklist completion.',
-    };
-  }
-
-  if (runDetail.metrics.length === 0 || runDetail.artifacts.length === 0) {
-    return {
-      label: 'Almost ready',
-      explanation: 'The setup is documented, but the run still needs more evidence like metrics or artifacts.',
-    };
-  }
-
-  return {
-    label: 'Ready',
-    explanation: 'This run has the core details and evidence another researcher would need to follow it.',
-  };
 }
 
 export default function HomePage() {
@@ -71,7 +40,7 @@ export default function HomePage() {
   const selectedExperiment = experiments.find((experiment) => experiment.id === selectedExperimentId) ?? experiments[0];
   const completedRuns = runs.filter((run) => run.status === 'completed').length;
   const failedRuns = runs.filter((run) => run.status === 'failed').length;
-  const reproducibility = getOverviewReproStatus(runDetail);
+  const reproducibility = assessReproducibility(runDetail);
 
   return (
     <AppShell
@@ -167,8 +136,9 @@ export default function HomePage() {
                 <div className="inline-stat"><span>Completed</span><span>{completedRuns}</span></div>
                 <div className="inline-stat"><span>Failed</span><span>{failedRuns}</span></div>
               </div>
-              <div className="list-item">
+              <div className={`list-item reproducibility-summary ${reproducibility.tone}`}>
                 <strong>Reproducibility snapshot: {reproducibility.label}</strong>
+                <div className="inline-stat"><span>Score</span><span>{reproducibility.score}/100</span></div>
                 <span className="muted">{reproducibility.explanation}</span>
               </div>
             </div>
@@ -223,19 +193,19 @@ export default function HomePage() {
 
           <section className="panel">
             <p className="eyebrow">Reproducibility guide</p>
-            <h3>What makes a run repeatable</h3>
+            <h3>How the score works</h3>
             <div className="list compact-list">
               <div className="list-item compact-item">
-                <strong>Random seed</strong>
-                <span className="muted">A number that makes random behavior repeatable so two runs can behave the same way.</span>
+                <strong>Core setup</strong>
+                <span className="muted">A run scores higher when it records a random seed and code reference.</span>
               </div>
               <div className="list-item compact-item">
-                <strong>Code reference</strong>
-                <span className="muted">The exact version of the code used, usually a branch or commit reference.</span>
+                <strong>Required checks</strong>
+                <span className="muted">Required checklist items must be passed or waived before a run can be considered ready.</span>
               </div>
               <div className="list-item compact-item">
-                <strong>Artifacts</strong>
-                <span className="muted">Evidence files like logs, plots, model checkpoints, or reports produced by the run.</span>
+                <strong>Evidence</strong>
+                <span className="muted">Metrics and artifacts lift a run from documented to genuinely believable.</span>
               </div>
             </div>
           </section>
