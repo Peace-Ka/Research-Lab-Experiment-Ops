@@ -1,9 +1,12 @@
-import { mkdir, rm, writeFile } from 'fs/promises';
+import { access, mkdir, rm, writeFile } from 'fs/promises';
 import { dirname, join } from 'path';
-import { ArtifactType, ChecklistStatus, PrismaClient, RunStatus, WorkspaceRole } from '@prisma/client';
+import { ArtifactType, ChecklistStatus, PrismaClient, RunStatus, WorkspaceMembershipStatus, WorkspaceRole } from '@prisma/client';
 
 const prisma = new PrismaClient();
 const artifactRoot = join(process.cwd(), 'storage', 'artifacts');
+const DEMO_USER_EMAIL = 'seed-demo@labops.dev';
+const DEMO_USER_EXTERNAL_ID = 'seed-demo-user';
+const SEED_MODE = process.argv.includes('--mode=reset') ? 'reset' : 'safe';
 
 async function resetArtifactStorage() {
   await rm(artifactRoot, { recursive: true, force: true });
@@ -16,7 +19,17 @@ async function writeArtifactFile(storageKey: string, content: string) {
   await writeFile(targetPath, content);
 }
 
-async function seed(): Promise<void> {
+async function ensureArtifactFile(storageKey: string, content: string) {
+  const targetPath = join(artifactRoot, storageKey);
+
+  try {
+    await access(targetPath);
+  } catch {
+    await writeArtifactFile(storageKey, content);
+  }
+}
+
+async function resetAllData() {
   await resetArtifactStorage();
   await prisma.runChecklistState.deleteMany();
   await prisma.reproChecklistItem.deleteMany();
@@ -29,132 +42,341 @@ async function seed(): Promise<void> {
   await prisma.workspaceMembership.deleteMany();
   await prisma.workspace.deleteMany();
   await prisma.user.deleteMany();
+}
 
-  const user = await prisma.user.create({
+async function ensureDemoUser() {
+  const existing = await prisma.user.findUnique({ where: { email: DEMO_USER_EMAIL } });
+
+  if (existing) {
+    if (existing.externalAuthId !== DEMO_USER_EXTERNAL_ID) {
+      return prisma.user.update({
+        where: { id: existing.id },
+        data: {
+          externalAuthId: existing.externalAuthId ?? DEMO_USER_EXTERNAL_ID,
+          passwordHash: null,
+        },
+      });
+    }
+
+    return existing;
+  }
+
+  return prisma.user.create({
     data: {
-      externalAuthId: 'seed-demo-user',
-      email: 'seed-demo@labops.dev',
+      externalAuthId: DEMO_USER_EXTERNAL_ID,
+      email: DEMO_USER_EMAIL,
       name: 'Seed Demo Researcher',
       passwordHash: null,
     },
   });
+}
 
-  const workspace = await prisma.workspace.create({
-    data: {
+async function ensureDemoWorkspace() {
+  return prisma.workspace.upsert({
+    where: { slug: 'applied-ml-lab' },
+    update: {},
+    create: {
       name: 'Applied ML Lab',
       slug: 'applied-ml-lab',
       description: 'Demo workspace for live portfolio walkthroughs.',
     },
   });
+}
 
-  await prisma.workspaceMembership.create({
-    data: {
-      workspaceId: workspace.id,
-      userId: user.id,
+async function ensureMembership(workspaceId: string, userId: string) {
+  return prisma.workspaceMembership.upsert({
+    where: {
+      workspaceId_userId: {
+        workspaceId,
+        userId,
+      },
+    },
+    update: {
       role: WorkspaceRole.owner,
+      status: WorkspaceMembershipStatus.active,
+    },
+    create: {
+      workspaceId,
+      userId,
+      role: WorkspaceRole.owner,
+      status: WorkspaceMembershipStatus.active,
     },
   });
+}
 
-  const project = await prisma.project.create({
-    data: {
-      workspaceId: workspace.id,
-      ownerUserId: user.id,
+async function ensureDemoProject(workspaceId: string, userId: string) {
+  return prisma.project.upsert({
+    where: {
+      workspaceId_name: {
+        workspaceId,
+        name: 'Graph Reliability Study',
+      },
+    },
+    update: {},
+    create: {
+      workspaceId,
+      ownerUserId: userId,
       name: 'Graph Reliability Study',
       description: 'Baseline and ablation runs for graph model reproducibility.',
     },
   });
+}
 
-  const experiment = await prisma.experiment.create({
+async function ensureDemoExperiment(workspaceId: string, projectId: string, userId: string) {
+  const existing = await prisma.experiment.findFirst({
+    where: {
+      workspaceId,
+      projectId,
+      title: 'GCN stability ablation',
+    },
+  });
+
+  if (existing) {
+    return existing;
+  }
+
+  return prisma.experiment.create({
     data: {
-      workspaceId: workspace.id,
-      projectId: project.id,
+      workspaceId,
+      projectId,
       title: 'GCN stability ablation',
       hypothesis: 'Smaller learning rates reduce variance across repeated graph training runs.',
-      createdById: user.id,
+      createdById: userId,
+    },
+  });
+}
+
+async function ensureChecklistItems(workspaceId: string) {
+  const definitions = [
+    {
+      code: 'seed-recorded',
+      label: 'Random seed recorded',
+      description: 'A deterministic random seed is attached to the run.',
+      isRequired: true,
+    },
+    {
+      code: 'code-ref-recorded',
+      label: 'Code reference captured',
+      description: 'The exact commit or branch reference is recorded for replay.',
+      isRequired: true,
+    },
+    {
+      code: 'metrics-logged',
+      label: 'Outcome metrics logged',
+      description: 'At least one meaningful evaluation metric is attached to the run.',
+      isRequired: true,
+    },
+    {
+      code: 'notes-reviewed',
+      label: 'Notes reviewed',
+      description: 'The run carries enough notes for another researcher to understand context.',
+      isRequired: false,
+    },
+  ] as const;
+
+  const items = await Promise.all(
+    definitions.map((item) =>
+      prisma.reproChecklistItem.upsert({
+        where: {
+          workspaceId_code: {
+            workspaceId,
+            code: item.code,
+          },
+        },
+        update: {},
+        create: {
+          workspaceId,
+          code: item.code,
+          label: item.label,
+          description: item.description,
+          isRequired: item.isRequired,
+        },
+      }),
+    ),
+  );
+
+  return new Map(items.map((item) => [item.code, item.id]));
+}
+
+async function ensureRun(
+  workspaceId: string,
+  experimentId: string,
+  userId: string,
+  definition: {
+    runNumber: number;
+    status: RunStatus;
+    codeRef: string;
+    randomSeed: number;
+    notes: string;
+  },
+) {
+  const existing = await prisma.experimentRun.findFirst({
+    where: {
+      workspaceId,
+      experimentId,
+      runNumber: definition.runNumber,
     },
   });
 
-  const checklistItems = await prisma.reproChecklistItem.createManyAndReturn({
-    data: [
-      {
-        workspaceId: workspace.id,
-        code: 'seed-recorded',
-        label: 'Random seed recorded',
-        description: 'A deterministic random seed is attached to the run.',
-      },
-      {
-        workspaceId: workspace.id,
-        code: 'code-ref-recorded',
-        label: 'Code reference captured',
-        description: 'The exact commit or branch reference is recorded for replay.',
-      },
-      {
-        workspaceId: workspace.id,
-        code: 'metrics-logged',
-        label: 'Outcome metrics logged',
-        description: 'At least one meaningful evaluation metric is attached to the run.',
-      },
-      {
-        workspaceId: workspace.id,
-        code: 'notes-reviewed',
-        label: 'Notes reviewed',
-        description: 'The run carries enough notes for another researcher to understand context.',
-        isRequired: false,
-      },
-    ],
-  });
+  if (existing) {
+    return existing;
+  }
 
-  const runOne = await prisma.experimentRun.create({
+  return prisma.experimentRun.create({
     data: {
-      workspaceId: workspace.id,
-      experimentId: experiment.id,
-      runNumber: 1,
-      status: RunStatus.completed,
-      createdById: user.id,
-      codeRef: 'main@a1b2c3d',
-      randomSeed: 42,
-      notes: 'Baseline configuration completed successfully.',
+      workspaceId,
+      experimentId,
+      runNumber: definition.runNumber,
+      status: definition.status,
+      createdById: userId,
+      codeRef: definition.codeRef,
+      randomSeed: definition.randomSeed,
+      notes: definition.notes,
+    },
+  });
+}
+
+async function ensureRunParam(runId: string, key: string, value: string) {
+  const existing = await prisma.runParam.findUnique({
+    where: {
+      runId_key: {
+        runId,
+        key,
+      },
     },
   });
 
-  const runTwo = await prisma.experimentRun.create({
-    data: {
-      workspaceId: workspace.id,
-      experimentId: experiment.id,
-      runNumber: 2,
-      status: RunStatus.failed,
-      createdById: user.id,
-      codeRef: 'main@d4e5f6g',
-      randomSeed: 43,
-      notes: 'Ablation failed due to exploding gradients at epoch 12.',
+  if (!existing) {
+    await prisma.runParam.create({
+      data: { runId, key, value },
+    });
+  }
+}
+
+async function ensureRunMetric(runId: string, key: string, value: number, step: number) {
+  const existing = await prisma.runMetric.findFirst({
+    where: { runId, key, value, step },
+  });
+
+  if (!existing) {
+    await prisma.runMetric.create({
+      data: { runId, key, value, step },
+    });
+  }
+}
+
+async function ensureArtifact(
+  runId: string,
+  artifact: {
+    type: ArtifactType;
+    fileName: string;
+    storageKey: string;
+    checksumSha256: string;
+    sizeBytes: number;
+    content: string;
+  },
+) {
+  await ensureArtifactFile(artifact.storageKey, artifact.content);
+
+  const existing = await prisma.artifact.findFirst({
+    where: {
+      runId,
+      storageKey: artifact.storageKey,
     },
   });
 
-  await prisma.runParam.createMany({
-    data: [
-      { runId: runOne.id, key: 'learning_rate', value: '0.001' },
-      { runId: runOne.id, key: 'batch_size', value: '64' },
-      { runId: runTwo.id, key: 'learning_rate', value: '0.01' },
-      { runId: runTwo.id, key: 'batch_size', value: '64' },
-    ],
+  if (!existing) {
+    await prisma.artifact.create({
+      data: {
+        runId,
+        type: artifact.type,
+        fileName: artifact.fileName,
+        storageKey: artifact.storageKey,
+        checksumSha256: artifact.checksumSha256,
+        sizeBytes: BigInt(artifact.sizeBytes),
+      },
+    });
+  }
+}
+
+async function ensureChecklistState(
+  runId: string,
+  checklistItemId: string,
+  status: ChecklistStatus,
+  note: string,
+) {
+  const existing = await prisma.runChecklistState.findUnique({
+    where: {
+      runId_checklistItemId: {
+        runId,
+        checklistItemId,
+      },
+    },
   });
 
-  await prisma.runMetric.createMany({
-    data: [
-      { runId: runOne.id, key: 'accuracy', value: 0.821, step: 4 },
-      { runId: runOne.id, key: 'accuracy', value: 0.887, step: 8 },
-      { runId: runOne.id, key: 'accuracy', value: 0.914, step: 12 },
-      { runId: runOne.id, key: 'loss', value: 0.641, step: 4 },
-      { runId: runOne.id, key: 'loss', value: 0.332, step: 8 },
-      { runId: runOne.id, key: 'loss', value: 0.214, step: 12 },
-      { runId: runTwo.id, key: 'accuracy', value: 0.612, step: 4 },
-      { runId: runTwo.id, key: 'accuracy', value: 0.688, step: 8 },
-      { runId: runTwo.id, key: 'accuracy', value: 0.671, step: 12 },
-      { runId: runTwo.id, key: 'loss', value: 1.204, step: 4 },
-      { runId: runTwo.id, key: 'loss', value: 1.118, step: 8 },
-      { runId: runTwo.id, key: 'loss', value: 1.402, step: 12 },
-    ],
+  if (!existing) {
+    await prisma.runChecklistState.create({
+      data: {
+        runId,
+        checklistItemId,
+        status,
+        note,
+      },
+    });
+  }
+}
+
+async function seed(): Promise<void> {
+  if (SEED_MODE === 'reset') {
+    await resetAllData();
+  } else {
+    await mkdir(artifactRoot, { recursive: true });
+  }
+
+  const user = await ensureDemoUser();
+  const workspace = await ensureDemoWorkspace();
+  await ensureMembership(workspace.id, user.id);
+  const project = await ensureDemoProject(workspace.id, user.id);
+  const experiment = await ensureDemoExperiment(workspace.id, project.id, user.id);
+  const checklistByCode = await ensureChecklistItems(workspace.id);
+
+  const runOne = await ensureRun(workspace.id, experiment.id, user.id, {
+    runNumber: 1,
+    status: RunStatus.completed,
+    codeRef: 'main@a1b2c3d',
+    randomSeed: 42,
+    notes: 'Baseline configuration completed successfully.',
   });
+
+  const runTwo = await ensureRun(workspace.id, experiment.id, user.id, {
+    runNumber: 2,
+    status: RunStatus.failed,
+    codeRef: 'main@d4e5f6g',
+    randomSeed: 43,
+    notes: 'Ablation failed due to exploding gradients at epoch 12.',
+  });
+
+  await Promise.all([
+    ensureRunParam(runOne.id, 'learning_rate', '0.001'),
+    ensureRunParam(runOne.id, 'batch_size', '64'),
+    ensureRunParam(runTwo.id, 'learning_rate', '0.01'),
+    ensureRunParam(runTwo.id, 'batch_size', '64'),
+  ]);
+
+  await Promise.all([
+    ensureRunMetric(runOne.id, 'accuracy', 0.821, 4),
+    ensureRunMetric(runOne.id, 'accuracy', 0.887, 8),
+    ensureRunMetric(runOne.id, 'accuracy', 0.914, 12),
+    ensureRunMetric(runOne.id, 'loss', 0.641, 4),
+    ensureRunMetric(runOne.id, 'loss', 0.332, 8),
+    ensureRunMetric(runOne.id, 'loss', 0.214, 12),
+    ensureRunMetric(runTwo.id, 'accuracy', 0.612, 4),
+    ensureRunMetric(runTwo.id, 'accuracy', 0.688, 8),
+    ensureRunMetric(runTwo.id, 'accuracy', 0.671, 12),
+    ensureRunMetric(runTwo.id, 'loss', 1.204, 4),
+    ensureRunMetric(runTwo.id, 'loss', 1.118, 8),
+    ensureRunMetric(runTwo.id, 'loss', 1.402, 12),
+  ]);
 
   const seededArtifacts = [
     {
@@ -184,73 +406,24 @@ async function seed(): Promise<void> {
       sizeBytes: 6291456,
       content: 'seeded checkpoint placeholder for failed run',
     },
-  ];
+  ] as const;
 
-  await Promise.all(seededArtifacts.map((artifact) => writeArtifactFile(artifact.storageKey, artifact.content)));
+  await Promise.all(seededArtifacts.map((artifact) => ensureArtifact(artifact.runId, artifact)));
 
-  await prisma.artifact.createMany({
-    data: seededArtifacts.map(({ content, ...artifact }) => artifact),
-  });
+  await Promise.all([
+    ensureChecklistState(runOne.id, checklistByCode.get('seed-recorded')!, ChecklistStatus.passed, 'Seed 42 recorded in run metadata.'),
+    ensureChecklistState(runOne.id, checklistByCode.get('code-ref-recorded')!, ChecklistStatus.passed, 'Pinned to main@a1b2c3d.'),
+    ensureChecklistState(runOne.id, checklistByCode.get('metrics-logged')!, ChecklistStatus.passed, 'Accuracy and loss recorded across three checkpoints.'),
+    ensureChecklistState(runOne.id, checklistByCode.get('notes-reviewed')!, ChecklistStatus.passed, 'Baseline notes reviewed by demo owner.'),
+    ensureChecklistState(runTwo.id, checklistByCode.get('seed-recorded')!, ChecklistStatus.passed, 'Seed 43 recorded in run metadata.'),
+    ensureChecklistState(runTwo.id, checklistByCode.get('code-ref-recorded')!, ChecklistStatus.passed, 'Pinned to main@d4e5f6g.'),
+    ensureChecklistState(runTwo.id, checklistByCode.get('metrics-logged')!, ChecklistStatus.failed, 'Loss diverged by epoch 12 and final evaluation is incomplete.'),
+    ensureChecklistState(runTwo.id, checklistByCode.get('notes-reviewed')!, ChecklistStatus.pending, 'Failure analysis still needs peer review.'),
+  ]);
 
-  const checklistByCode = new Map(checklistItems.map((item) => [item.code, item.id]));
-
-  await prisma.runChecklistState.createMany({
-    data: [
-      {
-        runId: runOne.id,
-        checklistItemId: checklistByCode.get('seed-recorded')!,
-        status: ChecklistStatus.passed,
-        note: 'Seed 42 recorded in run metadata.',
-      },
-      {
-        runId: runOne.id,
-        checklistItemId: checklistByCode.get('code-ref-recorded')!,
-        status: ChecklistStatus.passed,
-        note: 'Pinned to main@a1b2c3d.',
-      },
-      {
-        runId: runOne.id,
-        checklistItemId: checklistByCode.get('metrics-logged')!,
-        status: ChecklistStatus.passed,
-        note: 'Accuracy and loss recorded across three checkpoints.',
-      },
-      {
-        runId: runOne.id,
-        checklistItemId: checklistByCode.get('notes-reviewed')!,
-        status: ChecklistStatus.passed,
-        note: 'Baseline notes reviewed by demo owner.',
-      },
-      {
-        runId: runTwo.id,
-        checklistItemId: checklistByCode.get('seed-recorded')!,
-        status: ChecklistStatus.passed,
-        note: 'Seed 43 recorded in run metadata.',
-      },
-      {
-        runId: runTwo.id,
-        checklistItemId: checklistByCode.get('code-ref-recorded')!,
-        status: ChecklistStatus.passed,
-        note: 'Pinned to main@d4e5f6g.',
-      },
-      {
-        runId: runTwo.id,
-        checklistItemId: checklistByCode.get('metrics-logged')!,
-        status: ChecklistStatus.failed,
-        note: 'Loss diverged by epoch 12 and final evaluation is incomplete.',
-      },
-      {
-        runId: runTwo.id,
-        checklistItemId: checklistByCode.get('notes-reviewed')!,
-        status: ChecklistStatus.pending,
-        note: 'Failure analysis still needs peer review.',
-      },
-    ],
-  });
-
-  console.log('Demo seed complete');
-  console.log(`User email: ${user.email}`);
-  console.log('User password: demo12345');
-  console.log(`User ID: ${user.id}`);
+  console.log(`Seed mode: ${SEED_MODE}`);
+  console.log('Demo seed ready');
+  console.log(`Demo user email: ${user.email}`);
   console.log(`Workspace ID: ${workspace.id}`);
   console.log(`Project ID: ${project.id}`);
   console.log(`Experiment ID: ${experiment.id}`);
@@ -264,5 +437,3 @@ void seed()
   .finally(async () => {
     await prisma.$disconnect();
   });
-
-
