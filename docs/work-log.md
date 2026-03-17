@@ -48,3 +48,5 @@
 - Added protected Clerk sign-in/sign-up routes, Next.js middleware, and overview-page workspace onboarding so a fresh authenticated user can bootstrap the app.
 - Brought the finalized Clerk migration onto `feat/run-comparison` so comparison work is not built on top of stale custom-auth code.
 - Added a new run comparison panel that lets the user compare up to three runs across params, metrics, reproducibility, and evidence from the experiments page.
+- Changed seeding so the default command is safe and no longer wipes manually entered data.
+- Added an explicit destructive reset command for rebuilding the demo workspace from scratch.

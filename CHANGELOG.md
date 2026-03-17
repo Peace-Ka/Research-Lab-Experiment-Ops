@@ -43,3 +43,5 @@
 - Added Clerk-protected app routes plus overview-page workspace creation so new authenticated users can bootstrap the system without seeded login credentials.
 - Added a run comparison workspace on the experiments page with side-by-side views for params, latest metrics, checklist readiness, and artifact presence.
 - Reconciled the comparison branch with the finalized Clerk auth migration so run comparison builds on the provider-managed auth baseline.
+- Made `npm run prisma:seed` safe by default so it preserves user-created data while topping up missing demo records.
+- Added `npm run prisma:seed:reset` as the explicit destructive demo reset command.

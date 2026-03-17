@@ -206,3 +206,11 @@ pm run web:build`n- Result: The experiments page now lets the user choose a spec
   - `npx.cmd tsc --noEmit -p apps/web/tsconfig.json`
 - Result: Run comparison now supports selecting up to three runs and comparing lifecycle status, params, latest metrics, checklist state, and evidence counts side by side. Backend unit tests pass again after bringing the completed Clerk migration onto this branch.
 - Follow-up: Verify the comparison panel visually in the browser, then commit and push this branch before opening the PR.
+
+## 2026-03-17 00:40 CST
+- Summary: Split demo seeding into safe and destructive modes so user-created work is preserved by default.
+- Files changed: `prisma/seed.ts`, `package.json`, `apps/api/package.json`, `README.md`
+- Commands run:
+  - `npm.cmd run test`
+- Result: `npm run prisma:seed` now preserves manual workspace/project/experiment/run data and only fills in missing demo defaults. `npm run prisma:seed:reset` is now the explicit destructive reset path.
+- Follow-up: Verify both seed commands against a live local database when Docker access is available from the shell.
