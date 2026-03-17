@@ -41,3 +41,5 @@
 - Replaced the custom auth flow with Clerk-managed sign-in/sign-up and backend token verification.
 - Added local user mapping via `externalAuthId` and a Prisma migration for Clerk-backed identities.
 - Added Clerk-protected app routes plus overview-page workspace creation so new authenticated users can bootstrap the system without seeded login credentials.
+- Added a run comparison workspace on the experiments page with side-by-side views for params, latest metrics, checklist readiness, and artifact presence.
+- Reconciled the comparison branch with the finalized Clerk auth migration so run comparison builds on the provider-managed auth baseline.

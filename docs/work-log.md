@@ -46,3 +46,5 @@
 - Replaced the custom JWT/login panel with Clerk-managed auth across the web app and backend guard.
 - Added local user mapping via `externalAuthId` so Clerk identities can own workspaces, projects, experiments, and runs in the local database.
 - Added protected Clerk sign-in/sign-up routes, Next.js middleware, and overview-page workspace onboarding so a fresh authenticated user can bootstrap the app.
+- Brought the finalized Clerk migration onto `feat/run-comparison` so comparison work is not built on top of stale custom-auth code.
+- Added a new run comparison panel that lets the user compare up to three runs across params, metrics, reproducibility, and evidence from the experiments page.

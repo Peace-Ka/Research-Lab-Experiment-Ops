@@ -28,6 +28,12 @@ const EMPTY_CHECKLIST: RunChecklistStateRecord[] = [];
 
 type ChecklistDraftMap = Record<string, string>;
 
+type ReproducibilityStatus = {
+  label: 'Ready' | 'Almost ready' | 'Blocked';
+  tone: 'success' | 'warning' | 'danger';
+  explanation: string;
+};
+
 function formatBytes(sizeBytes?: string | number | null) {
   if (sizeBytes === undefined || sizeBytes === null) {
     return 'unknown size';
@@ -47,6 +53,39 @@ function formatBytes(sizeBytes?: string | number | null) {
   }
 
   return `${raw} B`;
+}
+
+function getReproducibilityStatus(
+  run: RunDetail,
+  summary: { passed: number; total: number; blocking: number },
+): ReproducibilityStatus {
+  const missingCoreMetadata = !run.codeRef || run.randomSeed == null;
+  const missingEvidence = run.metrics.length === 0 || run.artifacts.length === 0;
+
+  if (summary.blocking > 0 || missingCoreMetadata) {
+    return {
+      label: 'Blocked',
+      tone: 'danger',
+      explanation:
+        'This run is still missing important details someone else would need to repeat it reliably. Record the code reference, random seed, and finish the required checklist items.',
+    };
+  }
+
+  if (missingEvidence) {
+    return {
+      label: 'Almost ready',
+      tone: 'warning',
+      explanation:
+        'The core setup is captured, but the run still needs stronger evidence. Add final metrics or attach artifacts like logs, plots, or checkpoints.',
+    };
+  }
+
+  return {
+    label: 'Ready',
+    tone: 'success',
+    explanation:
+      'This run has the key ingredients for another researcher to follow it: code reference, random seed, required checks, and recorded evidence.',
+  };
 }
 
 export function RunDetailPanel({ workspaceId, tokenResolver, apiBase, runDetail, onRefresh }: RunDetailPanelProps) {
@@ -93,6 +132,14 @@ export function RunDetailPanel({ workspaceId, tokenResolver, apiBase, runDetail,
 
     return { passed, total, blocking };
   }, [checklistStates, runDetail]);
+
+  const reproducibilityStatus = useMemo(() => {
+    if (!runDetail) {
+      return null;
+    }
+
+    return getReproducibilityStatus(runDetail, checklistSummary);
+  }, [runDetail, checklistSummary]);
 
   async function handleStatusSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -157,7 +204,9 @@ export function RunDetailPanel({ workspaceId, tokenResolver, apiBase, runDetail,
           key: metricKey,
           value: Number(metricValue),
           step: metricStep ? Number(metricStep) : undefined,
-        }, tokenResolver, apiBase,
+        },
+        tokenResolver,
+        apiBase,
       );
       setMetricKey('');
       setMetricValue('');
@@ -188,7 +237,9 @@ export function RunDetailPanel({ workspaceId, tokenResolver, apiBase, runDetail,
         {
           type: artifactType,
           file: artifactFile,
-        }, tokenResolver, apiBase,
+        },
+        tokenResolver,
+        apiBase,
       );
       setArtifactFile(null);
       const input = document.getElementById('artifact-upload-input') as HTMLInputElement | null;
@@ -241,7 +292,9 @@ export function RunDetailPanel({ workspaceId, tokenResolver, apiBase, runDetail,
         {
           status: nextStatus,
           note: checklistNotes[state.checklistItem.id] || undefined,
-        }, tokenResolver, apiBase,
+        },
+        tokenResolver,
+        apiBase,
       );
       await onRefresh();
     } catch (submitError) {
@@ -268,7 +321,9 @@ export function RunDetailPanel({ workspaceId, tokenResolver, apiBase, runDetail,
         {
           status: state.status as (typeof CHECKLIST_STATUSES)[number],
           note: checklistNotes[state.checklistItem.id] || undefined,
-        }, tokenResolver, apiBase,
+        },
+        tokenResolver,
+        apiBase,
       );
       await onRefresh();
     } catch (submitError) {
@@ -300,6 +355,33 @@ export function RunDetailPanel({ workspaceId, tokenResolver, apiBase, runDetail,
             <strong>Notes:</strong> {runDetail.notes ?? 'none'}
           </div>
 
+          {reproducibilityStatus ? (
+            <section className={`panel nested-panel reproducibility-panel ${reproducibilityStatus.tone}`}>
+              <div className="panel-header">
+                <div>
+                  <p className="eyebrow">Reproducibility status</p>
+                  <h3>{reproducibilityStatus.label}</h3>
+                </div>
+                <span className="reproducibility-badge">{checklistSummary.passed}/{checklistSummary.total} checks</span>
+              </div>
+              <p className="muted">{reproducibilityStatus.explanation}</p>
+              <div className="list compact-list">
+                <div className="list-item compact-item">
+                  <strong>Random seed</strong>
+                  <span className="muted">The number that makes random behavior repeatable.</span>
+                </div>
+                <div className="list-item compact-item">
+                  <strong>Code reference</strong>
+                  <span className="muted">The exact code version used for this run, usually a commit or branch reference.</span>
+                </div>
+                <div className="list-item compact-item">
+                  <strong>Artifacts</strong>
+                  <span className="muted">Files the run produced, like logs, plots, checkpoints, or reports.</span>
+                </div>
+              </div>
+            </section>
+          ) : null}
+
           <div className="three-column">
             <section className="panel nested-panel">
               <p className="eyebrow">Lifecycle</p>
@@ -318,7 +400,7 @@ export function RunDetailPanel({ workspaceId, tokenResolver, apiBase, runDetail,
             </section>
 
             <section className="panel nested-panel">
-              <p className="eyebrow">Reproducibility</p>
+              <p className="eyebrow">Checklist summary</p>
               <strong>{checklistSummary.passed}/{checklistSummary.total} checks passed</strong>
               <span className="muted">{checklistSummary.blocking} required checks still block this run.</span>
             </section>
@@ -491,5 +573,3 @@ export function RunDetailPanel({ workspaceId, tokenResolver, apiBase, runDetail,
     </section>
   );
 }
-
-

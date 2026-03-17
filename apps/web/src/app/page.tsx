@@ -16,6 +16,38 @@ function slugifyWorkspaceName(value: string) {
     .slice(0, 48);
 }
 
+function getOverviewReproStatus(runDetail: { codeRef?: string | null; randomSeed?: number | null; metrics: unknown[]; artifacts: unknown[]; checklistStates: Array<{ status: string; checklistItem: { isRequired: boolean } }> } | null) {
+  if (!runDetail) {
+    return {
+      label: 'No run selected',
+      explanation: 'Pick an experiment run to see whether it is reproducible enough for another researcher to repeat.',
+    };
+  }
+
+  const blocking = runDetail.checklistStates.filter(
+    (state) => state.checklistItem.isRequired && state.status !== 'passed' && state.status !== 'waived',
+  ).length;
+
+  if (blocking > 0 || !runDetail.codeRef || runDetail.randomSeed == null) {
+    return {
+      label: 'Blocked',
+      explanation: 'This run still misses required setup details like code reference, random seed, or checklist completion.',
+    };
+  }
+
+  if (runDetail.metrics.length === 0 || runDetail.artifacts.length === 0) {
+    return {
+      label: 'Almost ready',
+      explanation: 'The setup is documented, but the run still needs more evidence like metrics or artifacts.',
+    };
+  }
+
+  return {
+    label: 'Ready',
+    explanation: 'This run has the core details and evidence another researcher would need to follow it.',
+  };
+}
+
 export default function HomePage() {
   const {
     ready,
@@ -39,6 +71,7 @@ export default function HomePage() {
   const selectedExperiment = experiments.find((experiment) => experiment.id === selectedExperimentId) ?? experiments[0];
   const completedRuns = runs.filter((run) => run.status === 'completed').length;
   const failedRuns = runs.filter((run) => run.status === 'failed').length;
+  const reproducibility = getOverviewReproStatus(runDetail);
 
   return (
     <AppShell
@@ -134,6 +167,10 @@ export default function HomePage() {
                 <div className="inline-stat"><span>Completed</span><span>{completedRuns}</span></div>
                 <div className="inline-stat"><span>Failed</span><span>{failedRuns}</span></div>
               </div>
+              <div className="list-item">
+                <strong>Reproducibility snapshot: {reproducibility.label}</strong>
+                <span className="muted">{reproducibility.explanation}</span>
+              </div>
             </div>
             {error ? <p className="error-text">{error}</p> : null}
           </section>
@@ -161,6 +198,46 @@ export default function HomePage() {
             <h3>{selectedExperiment?.title ?? 'No experiment selected'}</h3>
             <p className="muted">{runDetail?.notes ?? selectedExperiment?.hypothesis ?? 'Go to Experiments to pick an experiment and inspect its runs.'}</p>
             <Link className="secondary-button" href="/experiments">Open experiment workflow</Link>
+          </section>
+        </div>
+
+        <div className="two-column">
+          <section className="panel">
+            <p className="eyebrow">First experiment guide</p>
+            <h3>What each part means</h3>
+            <div className="list compact-list">
+              <div className="list-item compact-item">
+                <strong>Project</strong>
+                <span className="muted">The big research goal or study you are working on.</span>
+              </div>
+              <div className="list-item compact-item">
+                <strong>Experiment</strong>
+                <span className="muted">A specific question or hypothesis inside that project.</span>
+              </div>
+              <div className="list-item compact-item">
+                <strong>Run</strong>
+                <span className="muted">One actual attempt at the experiment with a particular setup.</span>
+              </div>
+            </div>
+          </section>
+
+          <section className="panel">
+            <p className="eyebrow">Reproducibility guide</p>
+            <h3>What makes a run repeatable</h3>
+            <div className="list compact-list">
+              <div className="list-item compact-item">
+                <strong>Random seed</strong>
+                <span className="muted">A number that makes random behavior repeatable so two runs can behave the same way.</span>
+              </div>
+              <div className="list-item compact-item">
+                <strong>Code reference</strong>
+                <span className="muted">The exact version of the code used, usually a branch or commit reference.</span>
+              </div>
+              <div className="list-item compact-item">
+                <strong>Artifacts</strong>
+                <span className="muted">Evidence files like logs, plots, model checkpoints, or reports produced by the run.</span>
+              </div>
+            </div>
           </section>
         </div>
       </div>

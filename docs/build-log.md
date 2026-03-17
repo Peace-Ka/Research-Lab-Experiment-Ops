@@ -196,3 +196,13 @@ pm run web:build`n- Result: The experiments page now lets the user choose a spec
   - `npm.cmd run web:build`
 - Result: The frontend now uses Clerk provider/middleware/sign-in/sign-up routes, the backend verifies Clerk-issued tokens and maps them to local users via `externalAuthId`, and new users can create their first workspace directly from the overview page.
 - Follow-up: Set real Clerk keys in `.env`, restart both dev servers, sign in through `/sign-in`, then verify workspace/project/experiment flows with a real Clerk user.
+
+## 2026-03-16 05:30 CST
+- Summary: Added a run comparison workspace on the experiments page and reconciled the branch with the full Clerk auth migration from the earlier auth branch.
+- Files changed: `apps/web/src/app/experiments/page.tsx`, `apps/web/src/components/run-comparison-panel.tsx`, `apps/web/src/app/globals.css`
+- Commands run:
+  - `git cherry-pick 1b6d203`
+  - `npm.cmd run test`
+  - `npx.cmd tsc --noEmit -p apps/web/tsconfig.json`
+- Result: Run comparison now supports selecting up to three runs and comparing lifecycle status, params, latest metrics, checklist state, and evidence counts side by side. Backend unit tests pass again after bringing the completed Clerk migration onto this branch.
+- Follow-up: Verify the comparison panel visually in the browser, then commit and push this branch before opening the PR.
