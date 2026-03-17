@@ -1,15 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { UserButton } from '@clerk/nextjs';
 import { PropsWithChildren } from 'react';
+import { usePathname } from 'next/navigation';
 
 type AppShellProps = PropsWithChildren<{
   title: string;
   subtitle: string;
   userId: string;
-  accessToken: string;
-  clearAuth: () => void;
   apiBase: string;
   setApiBase: (value: string) => void;
 }>;
@@ -20,16 +19,7 @@ const navItems = [
   { href: '/experiments', label: 'Experiments' },
 ] as const;
 
-export function AppShell({
-  title,
-  subtitle,
-  userId,
-  accessToken,
-  clearAuth,
-  apiBase,
-  setApiBase,
-  children,
-}: AppShellProps) {
+export function AppShell({ title, subtitle, userId, apiBase, setApiBase, children }: AppShellProps) {
   const pathname = usePathname();
 
   return (
@@ -55,17 +45,13 @@ export function AppShell({
             <input value={apiBase} onChange={(event) => setApiBase(event.target.value)} placeholder="http://localhost:3001/v1" />
           </label>
           <label>
-            Active User ID
-            <input value={userId} readOnly placeholder="Authenticate to load user context" />
+            Local User ID
+            <input value={userId} readOnly placeholder="Resolved from the Clerk session" />
           </label>
-          <label>
-            Access Token
-            <input value={accessToken ? 'Bearer token loaded' : ''} readOnly placeholder="Authenticate to store a bearer token" />
-          </label>
-          <button className="secondary-button" type="button" onClick={clearAuth}>
-            Sign out locally
-          </button>
-          <p className="hint">The shell now uses bearer auth for live API calls. The legacy x-user-id transport is only a fallback.</p>
+          <div className="clerk-user-row">
+            <UserButton />
+            <span className="hint">Authentication is managed by Clerk. The backend trusts Clerk-issued bearer tokens only.</span>
+          </div>
         </div>
       </aside>
 
@@ -83,3 +69,4 @@ export function AppShell({
     </div>
   );
 }
+

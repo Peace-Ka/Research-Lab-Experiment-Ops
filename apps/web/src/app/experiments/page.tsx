@@ -1,18 +1,21 @@
 'use client';
 
+import { useEffect, useMemo, useState } from 'react';
 import { AppShell } from '../../components/app-shell';
 import { CreateRecordPanel } from '../../components/create-record-panel';
 import { MetricVisualizationPanel } from '../../components/metric-visualization-panel';
+import { RunComparisonPanel } from '../../components/run-comparison-panel';
 import { RunDetailPanel } from '../../components/run-detail-panel';
 import { createExperiment, createRun } from '../../lib/api';
 import { useLabOpsData } from '../../lib/use-labops-data';
 import { useLabOpsSession } from '../../lib/use-labops-session';
 
+const MAX_COMPARE_RUNS = 3;
+
 export default function ExperimentsPage() {
   const {
     userId,
-    accessToken,
-    clearAuth,
+    getAccessToken,
     apiBase,
     setApiBase,
     selectedProjectId,
@@ -22,7 +25,7 @@ export default function ExperimentsPage() {
     selectedRunId,
     setSelectedRunId,
   } = useLabOpsSession();
-  const { workspaces, projects, experiments, runs, runDetail, loading, error, refresh } = useLabOpsData(accessToken, apiBase, {
+  const { workspaces, projects, experiments, runs, runDetail, loading, error, refresh } = useLabOpsData(getAccessToken, apiBase, {
     selectedProjectId,
     selectedExperimentId,
     selectedRunId,
@@ -30,6 +33,45 @@ export default function ExperimentsPage() {
     onExperimentResolved: setSelectedExperimentId,
     onRunResolved: setSelectedRunId,
   });
+  const [comparisonRunIds, setComparisonRunIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    setComparisonRunIds((current) => current.filter((runId) => runs.some((run) => run.id === runId)));
+  }, [runs]);
+
+  useEffect(() => {
+    if (!selectedRunId) {
+      return;
+    }
+
+    setComparisonRunIds((current) => {
+      if (current.includes(selectedRunId)) {
+        return current;
+      }
+
+      const next = [selectedRunId, ...current];
+      return next.slice(0, MAX_COMPARE_RUNS);
+    });
+  }, [selectedRunId]);
+
+  const comparisonLabel = useMemo(() => {
+    if (comparisonRunIds.length === 0) {
+      return 'No runs selected';
+    }
+
+    return `${comparisonRunIds.length} of ${MAX_COMPARE_RUNS} comparison slots used`;
+  }, [comparisonRunIds]);
+
+  function toggleComparisonRun(runId: string) {
+    setComparisonRunIds((current) => {
+      if (current.includes(runId)) {
+        return current.filter((id) => id !== runId);
+      }
+
+      return [runId, ...current].slice(0, MAX_COMPARE_RUNS);
+    });
+  }
+
   const workspace = workspaces[0];
   const project = projects.find((item) => item.id === selectedProjectId) ?? projects[0];
   const experiment = experiments.find((item) => item.id === selectedExperimentId) ?? experiments[0];
@@ -39,8 +81,6 @@ export default function ExperimentsPage() {
       title="Experiments"
       subtitle="Experiments are scoped to the selected project, runs are scoped to the selected experiment, and run detail follows the selected run."
       userId={userId}
-      accessToken={accessToken}
-      clearAuth={clearAuth}
       apiBase={apiBase}
       setApiBase={setApiBase}
     >
@@ -68,8 +108,8 @@ export default function ExperimentsPage() {
             ]}
             submitLabel="Create experiment"
             onSubmit={async (values) => {
-              if (!workspace || !project || !accessToken) {
-                throw new Error('A workspace, selected project, and active session are required before creating an experiment.');
+              if (!workspace || !project) {
+                throw new Error('Create a workspace and select a project before creating an experiment.');
               }
 
               const createdExperiment = await createExperiment(
@@ -79,7 +119,7 @@ export default function ExperimentsPage() {
                   title: values.title,
                   hypothesis: values.hypothesis,
                 },
-                accessToken,
+                getAccessToken,
                 apiBase,
               );
               setSelectedExperimentId(createdExperiment.id);
@@ -103,8 +143,8 @@ export default function ExperimentsPage() {
             ]}
             submitLabel="Create run"
             onSubmit={async (values) => {
-              if (!workspace || !experiment || !accessToken) {
-                throw new Error('A workspace, selected experiment, and active session are required before creating a run.');
+              if (!workspace || !experiment) {
+                throw new Error('Create a workspace and select an experiment before creating a run.');
               }
 
               const createdRun = await createRun(
@@ -115,7 +155,7 @@ export default function ExperimentsPage() {
                   randomSeed: values.randomSeed ? Number(values.randomSeed) : undefined,
                   notes: values.notes || undefined,
                 },
-                accessToken,
+                getAccessToken,
                 apiBase,
               );
               setSelectedRunId(createdRun.id);
@@ -165,7 +205,7 @@ export default function ExperimentsPage() {
                 <p className="eyebrow">Run history</p>
                 <h3>{experiment ? `Runs for ${experiment.title}` : 'No experiment selected'}</h3>
               </div>
-              <span className="muted">{runs.length} visible</span>
+              <span className="muted">{comparisonLabel}</span>
             </div>
 
             <div className="list">
@@ -176,16 +216,25 @@ export default function ExperimentsPage() {
                 </div>
               ) : (
                 runs.map((run) => (
-                  <button
+                  <div
                     key={run.id}
-                    type="button"
-                    className={selectedRunId === run.id ? 'list-item selectable-item active-item' : 'list-item selectable-item'}
-                    onClick={() => setSelectedRunId(run.id)}
+                    className={selectedRunId === run.id ? 'list-item selectable-shell active-item' : 'list-item selectable-shell'}
                   >
-                    <strong>Run #{run.runNumber}</strong>
-                    <div className="inline-stat"><span>Status</span><span>{run.status}</span></div>
-                    <div className="inline-stat"><span>Created by</span><span>{run.createdById}</span></div>
-                  </button>
+                    <div className="list-item-title-row">
+                      <strong>Run #{run.runNumber}</strong>
+                      <button
+                        className={comparisonRunIds.includes(run.id) ? 'compare-toggle selected' : 'compare-toggle'}
+                        type="button"
+                        onClick={() => toggleComparisonRun(run.id)}
+                      >
+                        {comparisonRunIds.includes(run.id) ? 'Comparing' : 'Compare'}
+                      </button>
+                    </div>
+                    <button className="list-item-body-button" type="button" onClick={() => setSelectedRunId(run.id)}>
+                      <div className="inline-stat"><span>Status</span><span>{run.status}</span></div>
+                      <div className="inline-stat"><span>Created by</span><span>{run.createdById}</span></div>
+                    </button>
+                  </div>
                 ))
               )}
             </div>
@@ -194,9 +243,18 @@ export default function ExperimentsPage() {
 
         <MetricVisualizationPanel runs={runs} runDetail={runDetail} />
 
+        <RunComparisonPanel
+          workspaceId={workspace?.id}
+          tokenResolver={getAccessToken}
+          apiBase={apiBase}
+          runs={runs}
+          selectedRunIds={comparisonRunIds}
+          onToggleRun={toggleComparisonRun}
+        />
+
         <RunDetailPanel
           workspaceId={workspace?.id}
-          accessToken={accessToken}
+          tokenResolver={getAccessToken}
           apiBase={apiBase}
           runDetail={runDetail}
           onRefresh={refresh}

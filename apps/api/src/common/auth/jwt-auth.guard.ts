@@ -1,7 +1,7 @@
 import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { IS_PUBLIC_KEY } from './auth.constants';
-import { TokenService } from './token.service';
+import { AuthService } from '../../modules/auth/auth.service';
 
 type AuthenticatedRequest = {
   headers?: Record<string, string | string[] | undefined>;
@@ -9,7 +9,8 @@ type AuthenticatedRequest = {
     id: string;
     email?: string;
     name?: string;
-    transport: 'bearer' | 'x-user-id';
+    clerkUserId?: string;
+    transport: 'clerk' | 'x-user-id';
   };
 };
 
@@ -17,10 +18,10 @@ type AuthenticatedRequest = {
 export class JwtAuthGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
-    private readonly tokenService: TokenService,
+    private readonly authService: AuthService,
   ) {}
 
-  canActivate(context: ExecutionContext): boolean {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
       context.getHandler(),
       context.getClass(),
@@ -31,30 +32,31 @@ export class JwtAuthGuard implements CanActivate {
     }
 
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
-    const authorization = this.getHeader(request, 'authorization');
 
-    if (authorization?.startsWith('Bearer ')) {
-      const token = authorization.slice('Bearer '.length).trim();
-      const user = this.tokenService.verifyToken(token);
+    const userIdFallback = this.getHeader(request, 'x-user-id');
+    if (process.env.NODE_ENV === 'test' && userIdFallback) {
       request.user = {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        transport: 'bearer',
-      };
-      return true;
-    }
-
-    const userId = this.getHeader(request, 'x-user-id');
-    if (userId) {
-      request.user = {
-        id: userId.trim(),
+        id: userIdFallback.trim(),
         transport: 'x-user-id',
       };
       return true;
     }
 
-    throw new UnauthorizedException('Missing bearer token');
+    const authorization = this.getHeader(request, 'authorization');
+    if (!authorization?.startsWith('Bearer ')) {
+      throw new UnauthorizedException('Missing Clerk bearer token');
+    }
+
+    const token = authorization.slice('Bearer '.length).trim();
+    const user = await this.authService.authenticateClerkToken(token);
+    request.user = {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      clerkUserId: user.clerkUserId,
+      transport: 'clerk',
+    };
+    return true;
   }
 
   private getHeader(request: AuthenticatedRequest, key: string): string | undefined {

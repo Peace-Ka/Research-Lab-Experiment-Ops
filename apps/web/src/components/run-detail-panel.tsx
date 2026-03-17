@@ -8,13 +8,14 @@ import {
   downloadRunArtifact,
   RunChecklistStateRecord,
   RunDetail,
+  TokenResolver,
   updateRunChecklistState,
   updateRunStatus,
 } from '../lib/api';
 
 type RunDetailPanelProps = {
   workspaceId?: string;
-  accessToken: string;
+  tokenResolver: TokenResolver;
   apiBase: string;
   runDetail: RunDetail | null;
   onRefresh: () => Promise<void>;
@@ -26,6 +27,12 @@ const ARTIFACT_TYPES = ['plot', 'log', 'checkpoint', 'model', 'dataset_snapshot'
 const EMPTY_CHECKLIST: RunChecklistStateRecord[] = [];
 
 type ChecklistDraftMap = Record<string, string>;
+
+type ReproducibilityStatus = {
+  label: 'Ready' | 'Almost ready' | 'Blocked';
+  tone: 'success' | 'warning' | 'danger';
+  explanation: string;
+};
 
 function formatBytes(sizeBytes?: string | number | null) {
   if (sizeBytes === undefined || sizeBytes === null) {
@@ -48,7 +55,40 @@ function formatBytes(sizeBytes?: string | number | null) {
   return `${raw} B`;
 }
 
-export function RunDetailPanel({ workspaceId, accessToken, apiBase, runDetail, onRefresh }: RunDetailPanelProps) {
+function getReproducibilityStatus(
+  run: RunDetail,
+  summary: { passed: number; total: number; blocking: number },
+): ReproducibilityStatus {
+  const missingCoreMetadata = !run.codeRef || run.randomSeed == null;
+  const missingEvidence = run.metrics.length === 0 || run.artifacts.length === 0;
+
+  if (summary.blocking > 0 || missingCoreMetadata) {
+    return {
+      label: 'Blocked',
+      tone: 'danger',
+      explanation:
+        'This run is still missing important details someone else would need to repeat it reliably. Record the code reference, random seed, and finish the required checklist items.',
+    };
+  }
+
+  if (missingEvidence) {
+    return {
+      label: 'Almost ready',
+      tone: 'warning',
+      explanation:
+        'The core setup is captured, but the run still needs stronger evidence. Add final metrics or attach artifacts like logs, plots, or checkpoints.',
+    };
+  }
+
+  return {
+    label: 'Ready',
+    tone: 'success',
+    explanation:
+      'This run has the key ingredients for another researcher to follow it: code reference, random seed, required checks, and recorded evidence.',
+  };
+}
+
+export function RunDetailPanel({ workspaceId, tokenResolver, apiBase, runDetail, onRefresh }: RunDetailPanelProps) {
   const [paramKey, setParamKey] = useState('');
   const [paramValue, setParamValue] = useState('');
   const [metricKey, setMetricKey] = useState('');
@@ -93,11 +133,19 @@ export function RunDetailPanel({ workspaceId, accessToken, apiBase, runDetail, o
     return { passed, total, blocking };
   }, [checklistStates, runDetail]);
 
+  const reproducibilityStatus = useMemo(() => {
+    if (!runDetail) {
+      return null;
+    }
+
+    return getReproducibilityStatus(runDetail, checklistSummary);
+  }, [runDetail, checklistSummary]);
+
   async function handleStatusSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!workspaceId || !runDetail || !accessToken) {
-      setError('Workspace, run, and active session are required.');
+    if (!workspaceId || !runDetail) {
+      setError('Workspace, run, and authentication context is required.');
       return;
     }
 
@@ -105,7 +153,7 @@ export function RunDetailPanel({ workspaceId, accessToken, apiBase, runDetail, o
     setError('');
 
     try {
-      await updateRunStatus(workspaceId, runDetail.id, { status: selectedStatus }, accessToken, apiBase);
+      await updateRunStatus(workspaceId, runDetail.id, { status: selectedStatus }, tokenResolver, apiBase);
       await onRefresh();
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : 'Failed to update run status.');
@@ -117,8 +165,8 @@ export function RunDetailPanel({ workspaceId, accessToken, apiBase, runDetail, o
   async function handleParamSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!workspaceId || !runDetail || !accessToken) {
-      setError('Workspace, run, and active session are required.');
+    if (!workspaceId || !runDetail) {
+      setError('Workspace, run, and authentication context is required.');
       return;
     }
 
@@ -126,7 +174,7 @@ export function RunDetailPanel({ workspaceId, accessToken, apiBase, runDetail, o
     setError('');
 
     try {
-      await addRunParam(workspaceId, runDetail.id, { key: paramKey, value: paramValue }, accessToken, apiBase);
+      await addRunParam(workspaceId, runDetail.id, { key: paramKey, value: paramValue }, tokenResolver, apiBase);
       setParamKey('');
       setParamValue('');
       await onRefresh();
@@ -140,8 +188,8 @@ export function RunDetailPanel({ workspaceId, accessToken, apiBase, runDetail, o
   async function handleMetricSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!workspaceId || !runDetail || !accessToken) {
-      setError('Workspace, run, and active session are required.');
+    if (!workspaceId || !runDetail) {
+      setError('Workspace, run, and authentication context is required.');
       return;
     }
 
@@ -156,7 +204,9 @@ export function RunDetailPanel({ workspaceId, accessToken, apiBase, runDetail, o
           key: metricKey,
           value: Number(metricValue),
           step: metricStep ? Number(metricStep) : undefined,
-        }, accessToken, apiBase,
+        },
+        tokenResolver,
+        apiBase,
       );
       setMetricKey('');
       setMetricValue('');
@@ -172,7 +222,7 @@ export function RunDetailPanel({ workspaceId, accessToken, apiBase, runDetail, o
   async function handleArtifactSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!workspaceId || !runDetail || !accessToken || !artifactFile) {
+    if (!workspaceId || !runDetail || !artifactFile) {
       setError('Workspace, run, active session, and artifact file are required.');
       return;
     }
@@ -187,7 +237,9 @@ export function RunDetailPanel({ workspaceId, accessToken, apiBase, runDetail, o
         {
           type: artifactType,
           file: artifactFile,
-        }, accessToken, apiBase,
+        },
+        tokenResolver,
+        apiBase,
       );
       setArtifactFile(null);
       const input = document.getElementById('artifact-upload-input') as HTMLInputElement | null;
@@ -203,8 +255,8 @@ export function RunDetailPanel({ workspaceId, accessToken, apiBase, runDetail, o
   }
 
   async function handleArtifactDownload(artifactId: string, fileName: string) {
-    if (!workspaceId || !runDetail || !accessToken) {
-      setError('Workspace, run, and active session are required.');
+    if (!workspaceId || !runDetail) {
+      setError('Workspace, run, and authentication context is required.');
       return;
     }
 
@@ -212,7 +264,7 @@ export function RunDetailPanel({ workspaceId, accessToken, apiBase, runDetail, o
     setError('');
 
     try {
-      await downloadRunArtifact(workspaceId, runDetail.id, artifactId, fileName, accessToken, apiBase);
+      await downloadRunArtifact(workspaceId, runDetail.id, artifactId, fileName, tokenResolver, apiBase);
     } catch (downloadError) {
       setError(downloadError instanceof Error ? downloadError.message : 'Failed to download artifact.');
     } finally {
@@ -224,8 +276,8 @@ export function RunDetailPanel({ workspaceId, accessToken, apiBase, runDetail, o
     state: RunChecklistStateRecord,
     nextStatus: (typeof CHECKLIST_STATUSES)[number],
   ) {
-    if (!workspaceId || !runDetail || !accessToken) {
-      setError('Workspace, run, and active session are required.');
+    if (!workspaceId || !runDetail) {
+      setError('Workspace, run, and authentication context is required.');
       return;
     }
 
@@ -240,7 +292,9 @@ export function RunDetailPanel({ workspaceId, accessToken, apiBase, runDetail, o
         {
           status: nextStatus,
           note: checklistNotes[state.checklistItem.id] || undefined,
-        }, accessToken, apiBase,
+        },
+        tokenResolver,
+        apiBase,
       );
       await onRefresh();
     } catch (submitError) {
@@ -251,8 +305,8 @@ export function RunDetailPanel({ workspaceId, accessToken, apiBase, runDetail, o
   }
 
   async function handleChecklistNoteSave(state: RunChecklistStateRecord) {
-    if (!workspaceId || !runDetail || !accessToken) {
-      setError('Workspace, run, and active session are required.');
+    if (!workspaceId || !runDetail) {
+      setError('Workspace, run, and authentication context is required.');
       return;
     }
 
@@ -267,7 +321,9 @@ export function RunDetailPanel({ workspaceId, accessToken, apiBase, runDetail, o
         {
           status: state.status as (typeof CHECKLIST_STATUSES)[number],
           note: checklistNotes[state.checklistItem.id] || undefined,
-        }, accessToken, apiBase,
+        },
+        tokenResolver,
+        apiBase,
       );
       await onRefresh();
     } catch (submitError) {
@@ -299,6 +355,33 @@ export function RunDetailPanel({ workspaceId, accessToken, apiBase, runDetail, o
             <strong>Notes:</strong> {runDetail.notes ?? 'none'}
           </div>
 
+          {reproducibilityStatus ? (
+            <section className={`panel nested-panel reproducibility-panel ${reproducibilityStatus.tone}`}>
+              <div className="panel-header">
+                <div>
+                  <p className="eyebrow">Reproducibility status</p>
+                  <h3>{reproducibilityStatus.label}</h3>
+                </div>
+                <span className="reproducibility-badge">{checklistSummary.passed}/{checklistSummary.total} checks</span>
+              </div>
+              <p className="muted">{reproducibilityStatus.explanation}</p>
+              <div className="list compact-list">
+                <div className="list-item compact-item">
+                  <strong>Random seed</strong>
+                  <span className="muted">The number that makes random behavior repeatable.</span>
+                </div>
+                <div className="list-item compact-item">
+                  <strong>Code reference</strong>
+                  <span className="muted">The exact code version used for this run, usually a commit or branch reference.</span>
+                </div>
+                <div className="list-item compact-item">
+                  <strong>Artifacts</strong>
+                  <span className="muted">Files the run produced, like logs, plots, checkpoints, or reports.</span>
+                </div>
+              </div>
+            </section>
+          ) : null}
+
           <div className="three-column">
             <section className="panel nested-panel">
               <p className="eyebrow">Lifecycle</p>
@@ -317,7 +400,7 @@ export function RunDetailPanel({ workspaceId, accessToken, apiBase, runDetail, o
             </section>
 
             <section className="panel nested-panel">
-              <p className="eyebrow">Reproducibility</p>
+              <p className="eyebrow">Checklist summary</p>
               <strong>{checklistSummary.passed}/{checklistSummary.total} checks passed</strong>
               <span className="muted">{checklistSummary.blocking} required checks still block this run.</span>
             </section>
@@ -490,4 +573,3 @@ export function RunDetailPanel({ workspaceId, accessToken, apiBase, runDetail, o
     </section>
   );
 }
-
