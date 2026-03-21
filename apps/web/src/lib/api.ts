@@ -356,3 +356,27 @@ export async function updateRunChecklistState(
     apiBase,
   );
 }
+
+export type AuditLogRecord = {
+  id: string;
+  action: string;
+  entityType: string;
+  entityId: string;
+  beforeJson?: unknown;
+  afterJson?: unknown;
+  createdAt: string;
+  actor?: {
+    id: string;
+    name: string;
+    email: string;
+  } | null;
+};
+
+export async function fetchAuditLogs(workspaceId: string, tokenResolver: TokenResolver, apiBase?: string) {
+  return request<{ workspaceId: string; items: AuditLogRecord[]; total: number }>(
+    `/workspaces/${workspaceId}/audit-logs`,
+    undefined,
+    tokenResolver,
+    apiBase,
+  );
+}

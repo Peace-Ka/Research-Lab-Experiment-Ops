@@ -169,7 +169,19 @@ export class RunsService {
       },
     });
 
-    this.auditService.log('run.create', 'run', run.id);
+    await this.auditService.log({
+      workspaceId,
+      actorUserId: userId,
+      action: 'run.create',
+      entityType: 'run',
+      entityId: run.id,
+      afterJson: {
+        runNumber: run.runNumber,
+        experimentId,
+        codeRef: payload.codeRef ?? null,
+        randomSeed: payload.randomSeed ?? null,
+      },
+    });
     return run;
   }
 
@@ -186,7 +198,14 @@ export class RunsService {
       data: payload,
     });
 
-    this.auditService.log('run.update_status', 'run', run.id);
+    await this.auditService.log({
+      workspaceId,
+      actorUserId: userId,
+      action: 'run.update_status',
+      entityType: 'run',
+      entityId: run.id,
+      afterJson: { runId, ...payload },
+    });
     return run;
   }
 
@@ -215,7 +234,14 @@ export class RunsService {
       },
     });
 
-    this.auditService.log('run.param_upsert', 'run_param', `${runId}:${payload.key}`);
+    await this.auditService.log({
+      workspaceId,
+      actorUserId: userId,
+      action: 'run.param_upsert',
+      entityType: 'run_param',
+      entityId: `${runId}:${payload.key}`,
+      afterJson: { runId, ...payload },
+    });
     return param;
   }
 
@@ -236,7 +262,14 @@ export class RunsService {
       },
     });
 
-    this.auditService.log('run.metric_create', 'run_metric', metric.id);
+    await this.auditService.log({
+      workspaceId,
+      actorUserId: userId,
+      action: 'run.metric_create',
+      entityType: 'run_metric',
+      entityId: metric.id,
+      afterJson: { runId, ...payload },
+    });
     return metric;
   }
 
@@ -276,7 +309,18 @@ export class RunsService {
       },
     });
 
-    this.auditService.log('run.artifact_create', 'artifact', artifact.id);
+    await this.auditService.log({
+      workspaceId,
+      actorUserId: userId,
+      action: 'run.artifact_create',
+      entityType: 'artifact',
+      entityId: artifact.id,
+      afterJson: {
+        type: payload.type,
+        fileName: file.originalname,
+        sizeBytes: file.size,
+      },
+    });
     return this.normalizeArtifact(artifact);
   }
 
@@ -317,8 +361,18 @@ export class RunsService {
       },
     });
 
-    this.auditService.log('run.checklist_update', 'run_checklist_state', checklistState.id);
+    await this.auditService.log({
+      workspaceId,
+      actorUserId: userId,
+      action: 'run.checklist_update',
+      entityType: 'run_checklist_state',
+      entityId: checklistState.id,
+      afterJson: {
+        checklistItemId,
+        status: payload.status,
+        note: payload.note ?? null,
+      },
+    });
     return checklistState;
   }
 }
-

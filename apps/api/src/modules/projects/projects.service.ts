@@ -55,7 +55,7 @@ export class ProjectsService {
       },
     });
 
-    this.auditService.log('project.create', 'project', project.id);
+    await this.auditService.log({ workspaceId, actorUserId: userId, action: 'project.create', entityType: 'project', entityId: project.id, afterJson: payload as unknown as import('@prisma/client').Prisma.InputJsonValue });
     return project;
   }
 
@@ -68,7 +68,7 @@ export class ProjectsService {
       data: payload,
     });
 
-    this.auditService.log('project.update', 'project', project.id);
+    await this.auditService.log({ workspaceId, actorUserId: userId, action: 'project.update', entityType: 'project', entityId: project.id, afterJson: payload as unknown as import('@prisma/client').Prisma.InputJsonValue });
     return project;
   }
 
@@ -76,7 +76,7 @@ export class ProjectsService {
     await this.workspaceAccess.requireMembership(workspaceId, userId, [WorkspaceRole.owner, WorkspaceRole.maintainer]);
     await this.findOne(workspaceId, projectId, userId);
     await this.prisma.project.delete({ where: { id: projectId } });
-    this.auditService.log('project.delete', 'project', projectId);
+    await this.auditService.log({ workspaceId, actorUserId: userId, action: 'project.delete', entityType: 'project', entityId: projectId });
     return { deleted: true, id: projectId, workspaceId };
   }
 }

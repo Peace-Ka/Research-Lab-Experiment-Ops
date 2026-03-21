@@ -75,7 +75,7 @@ describe('RunsService', () => {
         },
       },
     });
-    expect(audit.log).toHaveBeenCalledWith('run.create', 'run', 'run_3');
+    expect(audit.log).toHaveBeenCalledWith(expect.objectContaining({ action: 'run.create', entityType: 'run', entityId: 'run_3', workspaceId: 'ws_1', actorUserId: 'user_1' }));
     expect(result.runNumber).toBe(3);
   });
 
@@ -97,7 +97,7 @@ describe('RunsService', () => {
       update: { value: '0.001' },
       create: { runId: 'run_1', key: 'lr', value: '0.001' },
     });
-    expect(audit.log).toHaveBeenCalledWith('run.param_upsert', 'run_param', 'run_1:lr');
+    expect(audit.log).toHaveBeenCalledWith(expect.objectContaining({ action: 'run.param_upsert', entityType: 'run_param', entityId: 'run_1:lr', workspaceId: 'ws_1', actorUserId: 'user_1' }));
     expect(result.key).toBe('lr');
   });
 
@@ -111,7 +111,7 @@ describe('RunsService', () => {
     expect(prisma.runMetric.create).toHaveBeenCalledWith({
       data: { runId: 'run_1', key: 'accuracy', value: 0.93, step: 10 },
     });
-    expect(audit.log).toHaveBeenCalledWith('run.metric_create', 'run_metric', 'metric_1');
+    expect(audit.log).toHaveBeenCalledWith(expect.objectContaining({ action: 'run.metric_create', entityType: 'run_metric', entityId: 'metric_1', workspaceId: 'ws_1', actorUserId: 'user_1' }));
     expect(result.id).toBe('metric_1');
   });
 
@@ -141,7 +141,7 @@ describe('RunsService', () => {
         sizeBytes: BigInt(2048),
       }),
     });
-    expect(audit.log).toHaveBeenCalledWith('run.artifact_create', 'artifact', 'artifact_1');
+    expect(audit.log).toHaveBeenCalledWith(expect.objectContaining({ action: 'run.artifact_create', entityType: 'artifact', entityId: 'artifact_1', workspaceId: 'ws_1', actorUserId: 'user_1' }));
     expect(result.id).toBe('artifact_1');
   });
 
@@ -183,7 +183,7 @@ describe('RunsService', () => {
         checklistItem: true,
       },
     });
-    expect(audit.log).toHaveBeenCalledWith('run.checklist_update', 'run_checklist_state', 'state_1');
+    expect(audit.log).toHaveBeenCalledWith(expect.objectContaining({ action: 'run.checklist_update', entityType: 'run_checklist_state', entityId: 'state_1', workspaceId: 'ws_1', actorUserId: 'user_1' }));
     expect(result.id).toBe('state_1');
   });
 });

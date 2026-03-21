@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { ActivityTimelinePanel } from '../../components/activity-timeline-panel';
 import { AppShell } from '../../components/app-shell';
 import { CreateRecordPanel } from '../../components/create-record-panel';
 import { MetricVisualizationPanel } from '../../components/metric-visualization-panel';
@@ -76,6 +77,11 @@ export default function ExperimentsPage() {
   const workspace = workspaces[0];
   const project = projects.find((item) => item.id === selectedProjectId) ?? projects[0];
   const experiment = experiments.find((item) => item.id === selectedExperimentId) ?? experiments[0];
+  const timelineRefreshKey = [
+    selectedRunId,
+    runDetail?.updatedAt ?? '',
+    runs.map((run) => `${run.id}:${run.updatedAt}`).join('|'),
+  ].join('::');
 
   return (
     <AppShell
@@ -250,6 +256,16 @@ export default function ExperimentsPage() {
         />
 
         <MetricVisualizationPanel runs={runs} runDetail={runDetail} />
+
+        <ActivityTimelinePanel
+          workspaceId={workspace?.id}
+          projectId={project?.id}
+          experimentId={experiment?.id}
+          runs={runs}
+          tokenResolver={getAccessToken}
+          apiBase={apiBase}
+          refreshKey={timelineRefreshKey}
+        />
 
         <RunComparisonPanel
           workspaceId={workspace?.id}

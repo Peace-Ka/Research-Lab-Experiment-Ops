@@ -61,7 +61,7 @@ export class ExperimentsService {
       },
     });
 
-    this.auditService.log('experiment.create', 'experiment', experiment.id);
+    await this.auditService.log({ workspaceId, actorUserId: userId, action: 'experiment.create', entityType: 'experiment', entityId: experiment.id, afterJson: payload as unknown as import('@prisma/client').Prisma.InputJsonValue });
     return experiment;
   }
 
@@ -78,7 +78,7 @@ export class ExperimentsService {
       data: payload,
     });
 
-    this.auditService.log('experiment.update', 'experiment', experiment.id);
+    await this.auditService.log({ workspaceId, actorUserId: userId, action: 'experiment.update', entityType: 'experiment', entityId: experiment.id, afterJson: payload as unknown as import('@prisma/client').Prisma.InputJsonValue });
     return experiment;
   }
 }
