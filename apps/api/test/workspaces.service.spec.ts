@@ -41,7 +41,7 @@ describe('WorkspacesService', () => {
     const result = await service.create({ name: 'Lab Ops', slug: 'lab-ops' }, 'user_1');
 
     expect(prisma.$transaction).toHaveBeenCalled();
-    expect(audit.log).toHaveBeenCalledWith('workspace.create', 'workspace', 'ws_1');
+    expect(audit.log).toHaveBeenCalledWith(expect.objectContaining({ action: 'workspace.create', entityType: 'workspace', entityId: 'ws_1', workspaceId: 'ws_1', actorUserId: 'user_1' }));
     expect(result.id).toBe('ws_1');
   });
 

@@ -40,7 +40,7 @@ describe('ExperimentsService', () => {
         createdById: 'user_1',
       },
     });
-    expect(audit.log).toHaveBeenCalledWith('experiment.create', 'experiment', 'exp_1');
+    expect(audit.log).toHaveBeenCalledWith(expect.objectContaining({ action: 'experiment.create', entityType: 'experiment', entityId: 'exp_1', workspaceId: 'ws_1', actorUserId: 'user_1' }));
     expect(result.id).toBe('exp_1');
   });
 

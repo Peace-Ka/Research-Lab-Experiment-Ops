@@ -83,7 +83,7 @@ export class WorkspacesService {
       return createdWorkspace;
     });
 
-    this.auditService.log('workspace.create', 'workspace', workspace.id);
+    await this.auditService.log({ workspaceId: workspace.id, actorUserId: userId, action: 'workspace.create', entityType: 'workspace', entityId: workspace.id, afterJson: payload as unknown as Prisma.InputJsonValue });
     return workspace;
   }
 
@@ -96,7 +96,7 @@ export class WorkspacesService {
       data: payload,
     });
 
-    this.auditService.log('workspace.update', 'workspace', workspace.id);
+    await this.auditService.log({ workspaceId, actorUserId: userId, action: 'workspace.update', entityType: 'workspace', entityId: workspace.id, afterJson: payload as unknown as Prisma.InputJsonValue });
     return workspace;
   }
 
@@ -104,7 +104,7 @@ export class WorkspacesService {
     await this.workspaceAccess.requireMembership(workspaceId, userId, [WorkspaceRole.owner]);
     await this.findOne(workspaceId, userId);
     await this.prisma.workspace.delete({ where: { id: workspaceId } });
-    this.auditService.log('workspace.delete', 'workspace', workspaceId);
+    await this.auditService.log({ workspaceId, actorUserId: userId, action: 'workspace.delete', entityType: 'workspace', entityId: workspaceId });
     return { deleted: true, id: workspaceId };
   }
 }

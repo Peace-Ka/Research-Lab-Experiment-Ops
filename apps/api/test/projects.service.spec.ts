@@ -34,7 +34,7 @@ describe('ProjectsService', () => {
     expect(prisma.project.create).toHaveBeenCalledWith({
       data: { workspaceId: 'ws_1', ownerUserId: 'user_1', name: 'Benchmarking' },
     });
-    expect(audit.log).toHaveBeenCalledWith('project.create', 'project', 'proj_1');
+    expect(audit.log).toHaveBeenCalledWith(expect.objectContaining({ action: 'project.create', entityType: 'project', entityId: 'proj_1', workspaceId: 'ws_1', actorUserId: 'user_1' }));
     expect(result.id).toBe('proj_1');
   });
 
