@@ -79,6 +79,47 @@ describe('RunsService', () => {
     expect(result.runNumber).toBe(3);
   });
 
+  it('updates run metadata', async () => {
+    workspaceAccess.requireMembership.mockResolvedValue({ role: 'researcher' });
+    prisma.experimentRun.findFirst.mockResolvedValueOnce({
+      id: 'run_1',
+      workspaceId: 'ws_1',
+      status: RunStatus.queued,
+      codeRef: 'main@abc123',
+      randomSeed: 42,
+      notes: 'baseline',
+      params: [],
+      metrics: [],
+      artifacts: [],
+      checklistStates: [],
+    });
+    prisma.experimentRun.update.mockResolvedValue({
+      id: 'run_1',
+      workspaceId: 'ws_1',
+      status: RunStatus.queued,
+      codeRef: 'main@def456',
+      randomSeed: 7,
+      notes: 'updated note',
+    });
+
+    const result = await service.updateMetadata(
+      'ws_1',
+      'run_1',
+      { codeRef: 'main@def456', randomSeed: 7, notes: 'updated note' },
+      'user_1',
+    );
+
+    expect(prisma.experimentRun.update).toHaveBeenCalledWith({
+      where: { id: 'run_1' },
+      data: {
+        codeRef: 'main@def456',
+        randomSeed: 7,
+        notes: 'updated note',
+      },
+    });
+    expect(audit.log).toHaveBeenCalledWith(expect.objectContaining({ action: 'run.update_metadata', entityType: 'run', entityId: 'run_1', workspaceId: 'ws_1', actorUserId: 'user_1' }));
+    expect(result.codeRef).toBe('main@def456');
+  });
   it('throws when the run is missing', async () => {
     workspaceAccess.requireMembership.mockResolvedValue({ role: 'researcher' });
     prisma.experimentRun.findFirst.mockResolvedValue(null);
@@ -187,4 +228,6 @@ describe('RunsService', () => {
     expect(result.id).toBe('state_1');
   });
 });
+
+
 

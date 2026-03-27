@@ -12,6 +12,7 @@ import { CreateRunMetricDto } from './dto/create-run-metric.dto';
 import { CreateRunParamDto } from './dto/create-run-param.dto';
 import { CreateRunDto } from './dto/create-run.dto';
 import { UpdateRunChecklistStateDto } from './dto/update-run-checklist-state.dto';
+import { UpdateRunMetadataDto } from './dto/update-run-metadata.dto';
 import { UpdateRunStatusDto } from './dto/update-run-status.dto';
 
 @Injectable()
@@ -185,6 +186,43 @@ export class RunsService {
     return run;
   }
 
+  async updateMetadata(workspaceId: string, runId: string, payload: UpdateRunMetadataDto, userId: string) {
+    await this.workspaceAccess.requireMembership(workspaceId, userId, [
+      WorkspaceRole.owner,
+      WorkspaceRole.maintainer,
+      WorkspaceRole.researcher,
+    ]);
+    const existingRun = await this.findOne(workspaceId, runId, userId);
+
+    const updateData = {
+      codeRef: payload.codeRef ?? null,
+      randomSeed: payload.randomSeed ?? null,
+      notes: payload.notes ?? null,
+    };
+
+    const run = await this.prisma.experimentRun.update({
+      where: { id: runId },
+      data: updateData,
+    });
+
+    await this.auditService.log({
+      workspaceId,
+      actorUserId: userId,
+      action: 'run.update_metadata',
+      entityType: 'run',
+      entityId: run.id,
+      beforeJson: {
+        codeRef: existingRun.codeRef ?? null,
+        randomSeed: existingRun.randomSeed ?? null,
+        notes: existingRun.notes ?? null,
+      },
+      afterJson: {
+        runId,
+        ...updateData,
+      },
+    });
+    return run;
+  }
   async updateStatus(workspaceId: string, runId: string, payload: UpdateRunStatusDto, userId: string) {
     await this.workspaceAccess.requireMembership(workspaceId, userId, [
       WorkspaceRole.owner,
@@ -316,6 +354,7 @@ export class RunsService {
       entityType: 'artifact',
       entityId: artifact.id,
       afterJson: {
+        runId,
         type: payload.type,
         fileName: file.originalname,
         sizeBytes: file.size,
@@ -376,3 +415,4 @@ export class RunsService {
     return checklistState;
   }
 }
+

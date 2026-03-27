@@ -675,3 +675,23 @@ input[type="file"] {
 .timeline-copy {
   margin: 0.55rem 0 0.85rem;
 }
+.metadata-form {
+  display: grid;
+  gap: 0.9rem;
+  margin-top: 0.75rem;
+}
+
+.metadata-form label {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.metadata-notes-field {
+  grid-column: 1 / -1;
+}
+
+.metadata-actions {
+  display: flex;
+  justify-content: flex-start;
+}
+
