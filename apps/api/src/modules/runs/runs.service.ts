@@ -316,6 +316,7 @@ export class RunsService {
       entityType: 'artifact',
       entityId: artifact.id,
       afterJson: {
+        runId,
         type: payload.type,
         fileName: file.originalname,
         sizeBytes: file.size,

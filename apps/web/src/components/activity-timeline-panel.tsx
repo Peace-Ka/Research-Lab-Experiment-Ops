@@ -85,29 +85,33 @@ export function ActivityTimelinePanel({
   const filteredItems = useMemo(() => {
     const runIds = new Set(runs.map((run) => run.id));
 
-    return items
-      .filter((item) => {
-        if (item.entityType === 'project') {
-          return item.entityId === projectId;
-        }
+    const scopedItems = items.filter((item) => {
+      if (item.entityType === 'project') {
+        return item.entityId === projectId;
+      }
 
-        if (item.entityType === 'experiment') {
-          return item.entityId === experimentId;
-        }
+      if (item.entityType === 'experiment') {
+        return item.entityId === experimentId;
+      }
 
-        if (item.entityType === 'run') {
-          return runIds.has(item.entityId);
-        }
+      if (item.entityType === 'run') {
+        return runIds.has(item.entityId);
+      }
 
-        const afterJson = item.afterJson as Record<string, unknown> | null | undefined;
-        if (item.entityType === 'run_param' || item.entityType === 'run_metric' || item.entityType === 'artifact' || item.entityType === 'run_checklist_state') {
-          const entityPrefix = item.entityId.split(':')[0];
-          return runIds.has(entityPrefix) || (typeof afterJson?.runId === 'string' && runIds.has(afterJson.runId));
-        }
+      const afterJson = item.afterJson as Record<string, unknown> | null | undefined;
+      if (item.entityType === 'run_param' || item.entityType === 'run_metric' || item.entityType === 'artifact' || item.entityType === 'run_checklist_state') {
+        const entityPrefix = item.entityId.split(':')[0];
+        return runIds.has(entityPrefix) || (typeof afterJson?.runId === 'string' && runIds.has(afterJson.runId));
+      }
 
-        return false;
-      })
-      .slice(0, 20);
+      return false;
+    });
+
+    if (scopedItems.length > 0) {
+      return scopedItems.slice(0, 20);
+    }
+
+    return items.slice(0, 20);
   }, [items, projectId, experimentId, runs]);
 
   return (
