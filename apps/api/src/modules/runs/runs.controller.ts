@@ -18,6 +18,7 @@ import { CreateRunMetricDto } from './dto/create-run-metric.dto';
 import { CreateRunParamDto } from './dto/create-run-param.dto';
 import { CreateRunDto } from './dto/create-run.dto';
 import { UpdateRunChecklistStateDto } from './dto/update-run-checklist-state.dto';
+import { UpdateRunMetadataDto } from './dto/update-run-metadata.dto';
 import { UpdateRunStatusDto } from './dto/update-run-status.dto';
 import { RunsService } from './runs.service';
 
@@ -64,6 +65,16 @@ export class RunsController {
     @CurrentUserId() userId: string,
   ) {
     return this.runsService.create(workspaceId, experimentId, payload, userId);
+  }
+
+  @Patch('workspaces/:workspaceId/runs/:runId')
+  updateMetadata(
+    @Param('workspaceId') workspaceId: string,
+    @Param('runId') runId: string,
+    @Body() payload: UpdateRunMetadataDto,
+    @CurrentUserId() userId: string,
+  ) {
+    return this.runsService.updateMetadata(workspaceId, runId, payload, userId);
   }
 
   @Patch('workspaces/:workspaceId/runs/:runId/status')
@@ -119,4 +130,5 @@ export class RunsController {
     return this.runsService.updateChecklistState(workspaceId, runId, checklistItemId, payload, userId);
   }
 }
+
 

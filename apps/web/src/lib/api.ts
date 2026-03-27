@@ -259,6 +259,24 @@ export async function fetchRunDetail(workspaceId: string, runId: string, tokenRe
   return request<RunDetail>(`/workspaces/${workspaceId}/runs/${runId}`, undefined, tokenResolver, apiBase);
 }
 
+export async function updateRunMetadata(
+  workspaceId: string,
+  runId: string,
+  payload: { codeRef?: string | null; randomSeed?: number | null; notes?: string | null },
+  tokenResolver: TokenResolver,
+  apiBase?: string,
+) {
+  return request<RunSummary>(
+    `/workspaces/${workspaceId}/runs/${runId}`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    },
+    tokenResolver,
+    apiBase,
+  );
+}
+
 export async function updateRunStatus(
   workspaceId: string,
   runId: string,
@@ -380,3 +398,6 @@ export async function fetchAuditLogs(workspaceId: string, tokenResolver: TokenRe
     apiBase,
   );
 }
+
+
+

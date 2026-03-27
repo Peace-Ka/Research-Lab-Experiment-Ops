@@ -10,6 +10,7 @@ import {
   RunDetail,
   TokenResolver,
   updateRunChecklistState,
+  updateRunMetadata,
   updateRunStatus,
 } from '../lib/api';
 import { assessReproducibility } from '../lib/reproducibility';
@@ -59,6 +60,9 @@ export function RunDetailPanel({ workspaceId, tokenResolver, apiBase, runDetail,
   const [artifactType, setArtifactType] = useState<(typeof ARTIFACT_TYPES)[number]>('plot');
   const [artifactFile, setArtifactFile] = useState<File | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<(typeof RUN_STATUSES)[number]>('queued');
+  const [metadataCodeRef, setMetadataCodeRef] = useState('');
+  const [metadataRandomSeed, setMetadataRandomSeed] = useState('');
+  const [metadataNotes, setMetadataNotes] = useState('');
   const [checklistNotes, setChecklistNotes] = useState<ChecklistDraftMap>({});
   const [error, setError] = useState('');
   const [pending, setPending] = useState(false);
@@ -73,15 +77,52 @@ export function RunDetailPanel({ workspaceId, tokenResolver, apiBase, runDetail,
   useEffect(() => {
     if (!runDetail) {
       setSelectedStatus('queued');
+      setMetadataCodeRef('');
+      setMetadataRandomSeed('');
+      setMetadataNotes('');
       setChecklistNotes({});
       return;
     }
 
     setSelectedStatus(runDetail.status as (typeof RUN_STATUSES)[number]);
+    setMetadataCodeRef(runDetail.codeRef ?? '');
+    setMetadataRandomSeed(runDetail.randomSeed == null ? '' : String(runDetail.randomSeed));
+    setMetadataNotes(runDetail.notes ?? '');
     setChecklistNotes(Object.fromEntries(checklistStates.map((state) => [state.checklistItem.id, state.note ?? ''])));
   }, [checklistSignature, checklistStates, runDetail]);
 
   const reproducibilityStatus = useMemo(() => assessReproducibility(runDetail), [runDetail]);
+
+  async function handleMetadataSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!workspaceId || !runDetail) {
+      setError('Workspace, run, and authentication context is required.');
+      return;
+    }
+
+    setPending(true);
+    setError('');
+
+    try {
+      await updateRunMetadata(
+        workspaceId,
+        runDetail.id,
+        {
+          codeRef: metadataCodeRef.trim() ? metadataCodeRef.trim() : null,
+          randomSeed: metadataRandomSeed.trim() ? Number(metadataRandomSeed) : null,
+          notes: metadataNotes.trim() ? metadataNotes.trim() : null,
+        },
+        tokenResolver,
+        apiBase,
+      );
+      await onRefresh();
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : 'Failed to save run details.');
+    } finally {
+      setPending(false);
+    }
+  }
 
   async function handleStatusSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -289,13 +330,49 @@ export function RunDetailPanel({ workspaceId, tokenResolver, apiBase, runDetail,
         <p className="muted">Select a run to inspect parameters, metrics, checklist state, artifacts, and notes.</p>
       ) : (
         <div className="content-grid">
-          <div className="callout">
-            <strong>Code ref:</strong> {runDetail.codeRef ?? 'not recorded'}
-            <br />
-            <strong>Seed:</strong> {runDetail.randomSeed ?? 'not recorded'}
-            <br />
-            <strong>Notes:</strong> {runDetail.notes ?? 'none'}
-          </div>
+          <section className="panel nested-panel">
+            <div className="panel-header">
+              <div>
+                <p className="eyebrow">Run metadata</p>
+                <h3>Edit the details that make this run understandable</h3>
+              </div>
+            </div>
+            <form className="metadata-form" onSubmit={handleMetadataSubmit}>
+              <label>
+                Code reference
+                <input
+                  value={metadataCodeRef}
+                  onChange={(event) => setMetadataCodeRef(event.target.value)}
+                  placeholder="main@abc123"
+                />
+              </label>
+              <label>
+                Random seed
+                <input
+                  type="number"
+                  min="0"
+                  value={metadataRandomSeed}
+                  onChange={(event) => setMetadataRandomSeed(event.target.value)}
+                  placeholder="42"
+                />
+              </label>
+              <label className="metadata-notes-field">
+                Notes
+                <textarea
+                  className="text-area"
+                  value={metadataNotes}
+                  onChange={(event) => setMetadataNotes(event.target.value)}
+                  placeholder="What changed in this run, and why does it matter?"
+                />
+              </label>
+              <div className="metadata-actions">
+                <button className="secondary-button" type="submit" disabled={pending}>
+                  Save run details
+                </button>
+              </div>
+            </form>
+            <p className="hint">Code reference and random seed are two of the biggest inputs into reproducibility.</p>
+          </section>
 
           <section className={`panel nested-panel reproducibility-panel ${reproducibilityStatus.tone}`}>
             <div className="panel-header">
